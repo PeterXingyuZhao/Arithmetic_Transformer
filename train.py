@@ -21,6 +21,9 @@ import math
 from model import GPTConfig, GPT
 from main_utilities import *
 from evaluation import *
+from statistical_measurements import *
+
+import re
 
 def create_meta_for_addition(data):
     """Create metadata for addition data."""
@@ -50,6 +53,13 @@ def decode_addition(tensor, meta):
         return ''.join([meta['itos'][i.item()] for i in tensor])
     else:
         return ''.join([meta['itos'][i] for i in tensor])
+    
+def pad_sequence(x: torch.Tensor, length: int, pad_value: int):
+    if x.size(0) < length:
+        padding = torch.full((length - x.size(0),), pad_value, dtype=torch.long)
+        return torch.cat([x, padding], dim=0)
+    else:
+        return x
 
 class AdditionDataset(Dataset):
     def __init__(self, file_path, meta):
@@ -59,6 +69,7 @@ class AdditionDataset(Dataset):
             self.lines = f.readlines()
         # Remove any empty lines and strip whitespace
         self.lines = [line.strip() for line in self.lines if line.strip()]
+        self.block_size = block_size  # from your config
         
     def __len__(self):
         return len(self.lines)
@@ -66,8 +77,9 @@ class AdditionDataset(Dataset):
     def __getitem__(self, idx):
         line = self.lines[idx]
         # Convert the line to tensor using our encoder
-        x = encode_addition(line[:-1], self.meta)  # all but last char
-        y = encode_addition(line[1:], self.meta)   # all but first char
+        raw = encode_addition(line, self.meta)
+        x = pad_sequence(raw[:-1], self.block_size, pad_value=meta['stoi']['$'])  # all but last char
+        y = pad_sequence(raw[1:], self.block_size, pad_value=-1)   # all but first char
         return x, y
 
 # I/O
@@ -99,6 +111,7 @@ train_data_path = 'train.bin'
 val_data_path = 'val.bin'
 multi_digit = False
 num_digit = 3
+max_new_tokens = 5
 binary = False
 
 # using two data - data1 = text / data2 = addition
@@ -111,7 +124,7 @@ val_data_path2 = 'val_addition.bin'
 eval_text = False # if True get perplexity using eval_text_data_path
 eval_text_data_path = None # directory to text data (.bin file) - ex. 'data/shakespeare_add_ar_mixed/val_text.bin'
 eval_addition = False # if True compute test accuracy of "a+b="
-start = None
+test_file_path = None
 eval_addition_ar = False
 start_ar = None
 eval_other = False # use this to evaluate other operations (ex. train on operator '-' but evaluate on other_operator '+')
@@ -125,7 +138,6 @@ zero_pad = False
 algo_reason = False
 add_space = False
 analysis = False
-num_addition = 4
 
 # model
 n_layer = 6
@@ -172,13 +184,35 @@ random_C=False
 use_lora = False # use lora (from minLoRA)
 print_interval = 2  # if we're using gpt-2 model, I want to see it prompted on text
 
-# Add this near the top with other config variables
-test_dir = None  # Directory containing test files
-eval_additional_test = False  # whether to evaluate on additional test files
+mode = "compute_gold"  # Mode for evaluation: "compute_gold" or "read_gold_as_str"
+
+more_early_eval1 = False # if True, do early, more frequent eval on train and val data
+early_eval_interval1 = 25
+early_eval_border1 = 1000
+
+more_early_eval2 = False # if True, do even earlier, even more frequent eval on train and val data
+early_eval_interval2 = 5
+early_eval_border2 = 500
+
+stats_measurement_data_file_path = ""
+
+drop_leading_digit = False
 
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str, type(None)))]
 exec(open('configurator.py').read()) # overrides from command line or config file
 config = {k: globals()[k] for k in config_keys} # will be useful for logging
+
+# additional statistical measurements
+mi_measurement = False # whether to do mutual information measurement
+early_mi_measure_border = 20000 # border for early mutual information measurement
+early_mi_measure_interval = 1000 # interval for early mutual information measurement
+final_mi_measure_interval = 5000 # interval for final mutual information measurement
+
+mi_measure_iters = set(
+    list(range(0,  early_mi_measure_border, early_mi_measure_interval)) +    # every 20 steps before 200
+    # list(range(100000, 100000, 20)) +   # every 50 steps from 200 up to 1500
+    list(range(early_mi_measure_border, max_iters+1, final_mi_measure_interval))  # every 100 steps thereafter
+)
 
 # function to set seed for all random number generators
 def set_seed(seed):
@@ -225,6 +259,36 @@ meta = create_meta_for_addition(train_data)
 meta_vocab_size = meta['vocab_size']
 print(f"Using vocabulary size: {meta_vocab_size}")
 
+config['eos_id'] = meta['stoi']['$']
+
+with open(stats_measurement_data_file_path, 'r', encoding='utf-8') as f:
+    lines = [line.rstrip() for line in f]
+
+if drop_leading_digit:
+        S = num_digit
+else:
+    S = num_digit + 1
+# a simple way to parse test strings
+padded_lines = [] # add 0 padding, remove $; an example padded_lines[6] is '932+084+230+349=5951'
+for i in range(len(lines)):
+    numbers = re.split(r'[+=]', lines[i])
+    numbers[-1] = numbers[-1][:-1]
+    for k, number in enumerate(numbers[:-1]):
+        numbers[k] = '0' * (3-len(number)) + number
+    numbers[-1] = numbers[-1] + '0' * (S-len(numbers[-1]))
+    padded_lines.append("+".join(numbers[:-1]) + "=" + numbers[-1])
+
+stats_measurement_data = torch.cat([encode_addition(padded_lines[i], meta).unsqueeze(0) for i in range(len(padded_lines))], dim=0)
+
+# # get 16 different datasets (including the base dataset) by randomizing input/output integers of the base dataset
+# stats_measurement_dataset_list = gen_randomized_datasets(
+#     stats_measurement_data,
+#     meta,
+#     digits_per_num=num_digit,
+#     base_seed=2005,
+#     reverse_input=reverse_ab,
+#     reverse_output=reverse_c
+# )
 
 # init these up here, can override if init_from='resume' (i.e. from a checkpoint)
 iter_num = 0
@@ -366,16 +430,39 @@ result_dict = {
 }
 
 # Initialize test accuracy keys for all test files
-if eval_additional_test and test_dir:
-    test_files = [f for f in os.listdir(test_dir) if os.path.isfile(os.path.join(test_dir, f))]
-    for test_file in test_files:
-        test_name = os.path.splitext(os.path.basename(test_file))[0]
-        result_dict[f'test_acc_{test_name}'] = []
+result_dict[f'test_acc'] = []
 
 result_dir = get_results_dir(config)
 config['result_dir'] = result_dir
 with open(os.path.join(result_dir, "config.yaml"), "w") as yaml_file:
     yaml.dump(config, yaml_file, default_flow_style=False)
+
+
+# # build a dict of open file handles, one per dataset
+# csv_writers = {}
+# for dataset in stats_measurement_dataset_list:
+#     name = dataset['name']
+#     path = os.path.join(result_dir, f"{name}_stats.csv")
+#     f = open(path, 'w', newline='')
+#     writer = csv.DictWriter(f, fieldnames=[
+#         'iter',
+#         'ave_correct_probs',
+#         'ave_correct_preds',
+#         'ave_diff_probs_L1',
+#         'ave_diff_probs_L2',
+#         'ave_diff_probs_kl',
+#         'ave_diff_logits_L1',
+#         'ave_diff_logits_L2',
+#         'ave_diff_preds',
+#     ])
+#     writer.writeheader()
+#     csv_writers[name] = writer
+
+
+# Initialize additional metrics for statistical measurements
+stats_oo = [] # output-output mutual information
+stats_io = [] # input-output mutual information
+
 
 import time
 t0 = time.time()
@@ -432,9 +519,84 @@ while iter_num < max_iters:
     scaler.update()
     optimizer.zero_grad(set_to_none=True)
     
-    
+    # Do additional statistical measurements
+    if mi_measurement:
+        if iter_num in mi_measure_iters:
+            model.eval()
+            
+            with torch.no_grad():
+                # eval_res = eval_model(model, meta, stats_measurement_dataset_list, digits_per_num=num_digit, batch_size=test_batch_size)
+                mi_stats = calc_model_dataset_mi(
+                    model = model,
+                    metadata = meta,
+                    data = stats_measurement_data,
+                    digits_per_num = num_digit,
+                    batch_size = test_batch_size,
+                    drop_leading_digit = drop_leading_digit
+                )
+
+            # for name, stats in eval_res.items():
+            #     if name == "model_embeddings":
+            #         continue
+            #     if name == 'base':
+            #         row = {
+            #             'iter': iter_num,
+            #             'ave_correct_probs': stats['ave_correct_probs'],
+            #             'ave_correct_preds': stats['ave_correct_preds'],
+            #         }
+            #     else:
+            #         row = {
+            #             'iter': iter_num,
+            #             'ave_correct_probs': stats['ave_correct_probs'],
+            #             'ave_correct_preds': stats['ave_correct_preds'],
+            #             'ave_diff_probs_L1': stats['ave_diff_probs_L1'],
+            #             'ave_diff_probs_L2': stats['ave_diff_probs_L2'],
+            #             'ave_diff_probs_kl': stats['ave_diff_probs_kl'],
+            #             'ave_diff_logits_L1': stats['ave_diff_logits_L1'],
+            #             'ave_diff_logits_L2': stats['ave_diff_logits_L2'],
+            #             'ave_diff_preds': stats['ave_diff_preds'],
+            #         }
+            #     # Write to the CSV file for this dataset
+            #     csv_writers[name].writerow(row)
+
+            
+            # Calculate output-output mutual information
+            mi_mat = mi_stats['output-output']['mutual_info']
+            nmi_mat = mi_stats['output-output']['normalized_mutual_info']
+            for i in range(mi_mat.shape[0]):
+                for j in range(i, mi_mat.shape[1]):
+                    stats_oo.append({
+                        'iter': iter_num,
+                        'i': i,
+                        'j': j,
+                        'mi': mi_mat[i, j].item(),
+                        'nmi': nmi_mat[i, j].item()
+                    })
+
+            # also calculate input-output mutual information
+            mi_mat_io = mi_stats['input-output']['mutual_info']
+            nmi_mat_io = mi_stats['input-output']['normalized_mutual_info']
+            for i in range(mi_mat_io.shape[0]):
+                for j in range(mi_mat_io.shape[1]):
+                    stats_io.append({
+                        'iter': iter_num,
+                        'i': i,
+                        'j': j,
+                        'mi': mi_mat_io[i, j].item(),
+                        'nmi': nmi_mat_io[i, j].item()
+                    })
+
+            # **NOW write out the two MI CSVs immediately:**
+            stats_oo_df = pd.DataFrame(stats_oo)
+            stats_oo_df.to_csv(os.path.join(result_dir, 'output_output_mi.csv'), index=False)
+
+            stats_io_df = pd.DataFrame(stats_io)
+            stats_io_df.to_csv(os.path.join(result_dir, 'input_output_mi.csv'), index=False)
+
+            model.train()
+        
     # Evaluation
-    if iter_num % eval_interval == 0:
+    if iter_num % eval_interval == 0 or (more_early_eval1 and iter_num <= early_eval_border1 and iter_num % early_eval_interval1 == 0) or (more_early_eval2 and iter_num <= early_eval_border2 and iter_num % early_eval_interval2 == 0):
         losses = estimate_loss()
         print(f"iter {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
         
@@ -452,21 +614,30 @@ while iter_num < max_iters:
         # Regular test evaluation
         test_accuracy = None
         if eval_addition:
-            config['start'] = start
-            test_accuracy, _ , correct, incorrect = evaluate_addition_batch(
-                config, model, ctx, 
+            test_name, test_accuracy, _ , correct, incorrect = evaluate_multiple_files(
+                config, model, ctx,
                 encode=lambda x: encode_addition(x, meta),
-                decode=lambda x: decode_addition(x, meta), 
-                verbose=False, 
-                num_digit=num_digit, 
+                decode=lambda x: decode_addition(x, meta),
+                test_file=test_file_path,
+                iter_num=iter_num,
+                result_dir=result_dir,
+                verbose=False,
+                num_digit=num_digit,
                 zero_pad=zero_pad,
-                reverse_ab=reverse_ab, 
+                reverse_ab=reverse_ab,
                 reverse_c=reverse_c,
-                data_type=data_type, 
-                operator=operator, 
-                data_format=data_format, 
-                analyze=True
+                data_type=data_type,
+                operator=operator,
+                data_format=data_format,
+                analyze=True,
+                mode=mode
             )
+
+            # Log results
+            print("\nTest Results:")
+            print(f"{test_name}: {test_accuracy:.2f}%")
+
+            print()
             
             # Add test accuracy to wandb_dict
             wandb_dict["test/accuracy"] = test_accuracy
@@ -488,7 +659,7 @@ while iter_num < max_iters:
         # Training data evaluation
         train_accuracy = None
         if eval_addition_train:
-            config['start'] = start_train
+            config['start'] = f"FILE:{start_train}"
             train_accuracy, _ , correct, incorrect = evaluate_addition_batch(
                 config, model, ctx, 
                 encode=lambda x: encode_addition(x, meta),
@@ -500,50 +671,12 @@ while iter_num < max_iters:
                 reverse_c=reverse_c,
                 data_type=data_type, 
                 operator=operator, 
-                data_format=data_format
+                data_format=data_format,
+                mode=mode
             )
             
             # Add train accuracy to wandb_dict
             wandb_dict["train/accuracy"] = train_accuracy
-        
-        # Additional test files evaluation
-        if eval_additional_test and test_dir:
-            test_files = []
-            for file in os.listdir(test_dir):
-                if os.path.isfile(os.path.join(test_dir, file)):
-                    test_files.append(os.path.join(test_dir, file))
-            
-            if not test_files:
-                print(f"Warning: No files found in test directory: {test_dir}")
-            else:
-                # Evaluate on all test files
-                test_results = evaluate_multiple_files(
-                    config, model, ctx,
-                    encode=lambda x: encode_addition(x, meta),
-                    decode=lambda x: decode_addition(x, meta),
-                    test_files=test_files,
-                    iter_num=iter_num,
-                    result_dir=result_dir,
-                    verbose=False,
-                    num_digit=num_digit,
-                    zero_pad=zero_pad,
-                    reverse_ab=reverse_ab,
-                    reverse_c=reverse_c,
-                    data_type=data_type,
-                    operator=operator,
-                    data_format=data_format,
-                    analyze=True
-                )
-                
-                # Log results
-                print("\nTest Results:")
-                for test_name, accuracy in test_results.items():
-                    print(f"{test_name}: {accuracy:.2f}%")
-                    # Add accuracy to result_dict (key was initialized at start)
-                    result_dict[f'test_acc_{test_name}'].append(accuracy)
-                    # Add to wandb_dict
-                    wandb_dict[f"test/accuracy_{test_name}"] = accuracy
-                print()
         
         # Update and save basic metrics
         result_dict['iter'].append(iter_num)
@@ -551,13 +684,6 @@ while iter_num < max_iters:
         result_dict['val_loss'].append(losses['val'].item())
         result_dict['test_acc'].append(test_accuracy)
         result_dict['train_acc'].append(train_accuracy)
-
-        # For any test file that wasn't evaluated this iteration, add None to maintain array lengths
-        if eval_additional_test and test_dir:
-            for test_file in test_files:
-                test_name = os.path.splitext(os.path.basename(test_file))[0]
-                if test_name not in test_results:
-                    result_dict[f'test_acc_{test_name}'].append(None)
         
         # Save results to CSV after each evaluation
         result_df = pd.DataFrame(result_dict)
@@ -586,7 +712,7 @@ torch.save(checkpoint, os.path.join(out_dir, f'ckpt_final.pt'))
 losses = estimate_loss()
 
 if eval_addition:
-    config['start'] = start
+    config['start'] = f"FILE:{test_file_path}"
     test_accuracy, _ , correct, incorrect = evaluate_addition_batch(
         config, model, ctx, 
         encode=lambda x: encode_addition(x, meta),
@@ -599,7 +725,8 @@ if eval_addition:
         data_type=data_type, 
         operator=operator, 
         data_format=data_format, 
-        analyze=True
+        analyze=True,
+        mode=mode
     )
     import csv
     # Save correct examples
@@ -623,7 +750,7 @@ if eval_addition:
             writer.writerow({'operands': operands, 'result': result, 'outcome': outcome, 'c_hat2': c_hat2})
 
 if eval_addition_train:
-    config['start'] = start_train
+    config['start'] = f"FILE:{start_train}"
     train_accuracy, _ , correct, incorrect = evaluate_addition_batch(
         config, model, ctx, 
         encode=lambda x: encode_addition(x, meta),
@@ -635,42 +762,33 @@ if eval_addition_train:
         reverse_c=reverse_c,
         data_type=data_type, 
         operator=operator, 
-        data_format=data_format
+        data_format=data_format,
+        mode=mode
     )
     
     
-if eval_additional_test and test_dir:
-    # Get all files from the test directory
-    test_files = []
-    for file in os.listdir(test_dir):
-        if os.path.isfile(os.path.join(test_dir, file)):
-            test_files.append(os.path.join(test_dir, file))
-    
-    if not test_files:
-        print(f"Warning: No files found in test directory: {test_dir}")
-    else:
-        final_results = evaluate_multiple_files(
-            config, model, ctx,
-            encode=lambda x: encode_addition(x, meta),
-            decode=lambda x: decode_addition(x, meta),
-            test_files=test_files,
-            iter_num='final',
-            result_dir=result_dir,
-            verbose=False,
-            num_digit=num_digit,
-            zero_pad=zero_pad,
-            reverse_ab=reverse_ab,
-            reverse_c=reverse_c,
-            data_type=data_type,
-            operator=operator,
-            data_format=data_format,
-            analyze=True
-        )
-        
-        print("\nFinal Test Results:")
-        for test_name, accuracy in final_results.items():
-            print(f"{test_name}: {accuracy:.2f}%")
-        print()
+test_name, accuracy, metrics, correct, incorrect = evaluate_multiple_files(
+    config, model, ctx,
+    encode=lambda x: encode_addition(x, meta),
+    decode=lambda x: decode_addition(x, meta),
+    test_file=test_file_path,
+    iter_num='final',
+    result_dir=result_dir,
+    verbose=False,
+    num_digit=num_digit,
+    zero_pad=zero_pad,
+    reverse_ab=reverse_ab,
+    reverse_c=reverse_c,
+    data_type=data_type,
+    operator=operator,
+    data_format=data_format,
+    analyze=True,
+    mode=mode
+)
+
+print("\nFinal Test Results:")
+print(f"{test_name}: {accuracy:.2f}%")
+print()
 
 
 # Final wandb logging
@@ -683,9 +801,7 @@ if wandb_log:
         "test/accuracy": test_accuracy if eval_addition else None,
         "train/accuracy": train_accuracy if eval_addition_train else None,
     }
-    if eval_additional_test and test_dir:
-        for test_name, accuracy in final_results.items():
-            final_dict[f"final_test/accuracy_{test_name}"] = accuracy
+    final_dict[f"final_test/accuracy"] = accuracy
     wandb.log(final_dict)
 
 # Save final DataFrame

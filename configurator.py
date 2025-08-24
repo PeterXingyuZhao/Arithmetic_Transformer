@@ -5,7 +5,7 @@ for arg in sys.argv[1:]:
     if '=' not in arg:
         # assume it's the name of a config file
         assert not arg.startswith('--')
-        config_file = arg
+        config_file = "./configuration_files/" + arg
         print(f"Overriding config with {config_file}:")
         with open(config_file) as f:
             print(f.read())
