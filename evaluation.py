@@ -9,7 +9,7 @@ import pandas as pd
 import csv
 
 
-def get_abc_new(abc: str, zero_pad=False, reverse_c=False, binary=False, mode: str = "compute_gold"):
+def get_abc_new(abc: str, zero_pad=False, data_format="plain", binary=False, mode: str = "compute_gold"):
     """Unified parser: mode='compute_gold' computes the groudtruth on the fly;
        mode='read_gold_as_str' reads the groundtruth from the evaluation files (testing, validation) to do string matching.
     Returns either
@@ -17,15 +17,6 @@ def get_abc_new(abc: str, zero_pad=False, reverse_c=False, binary=False, mode: s
     or
       (operands_str, result_int, result_str, operation)  # v2
     """
-    if '+' in abc:
-        operation = '+'
-    elif '-' in abc:
-        operation = '-' 
-    elif '*' in abc:
-        operation = '*'
-    else:
-        print(f'operation not found, abc: {abc}')
-        return None, None, None
 
     # Split the input string into parts
     parts = abc.split('=')
@@ -42,22 +33,26 @@ def get_abc_new(abc: str, zero_pad=False, reverse_c=False, binary=False, mode: s
     if 'Target' in operands_str:
         operands_str = operands_str.split('\nTarget')[0]
 
-    # Split into individual operands
-    operands = [op.strip() for op in operands_str.split(operation)]
-    
-    # Clean up operands
-    operands = [op.replace(' ', '') for op in operands]
-    
-    if binary:
-        # Convert all operands to binary and sum
-        result = sum(int(op, 2) for op in operands)
-        return operands_str, result, operation
-
-    if zero_pad:
-        operands = [remove_zero_pad(op) for op in operands]
-
     # version 1: compute the result
     if mode == "compute_gold":
+        if '+' in abc:
+            operation = '+'
+        elif '-' in abc:
+            operation = '-' 
+        elif '*' in abc:
+            operation = '*'
+        else:
+            print(f'operation not found, abc: {abc}')
+            return None, None, None
+        # Split into individual operands
+        operands = [op.strip() for op in operands_str.split(operation)]
+        
+        # Clean up operands
+        operands = [op.replace(' ', '') for op in operands]
+
+        if zero_pad:
+            operands = [remove_zero_pad(op) for op in operands]
+
         if operation == '+':
             result = sum(int(op) for op in operands)
         elif operation == '-':
@@ -70,6 +65,7 @@ def get_abc_new(abc: str, zero_pad=False, reverse_c=False, binary=False, mode: s
             raise ValueError(f"Unsupported operation: {operation}")
 
         return operands_str, result, operation
+    
     # version 2: read the groundtruth from the evaluation files
     if mode == "read_gold_as_str":
         # parts[1] is the result part, which may contain a trailing '$' or newline
@@ -78,13 +74,17 @@ def get_abc_new(abc: str, zero_pad=False, reverse_c=False, binary=False, mode: s
             result_str = result_str[:-1].strip()
         if result_str.endswith('$'):
             result_str = result_str[:-1].strip()
-        if reverse_c:
-            result_str = result_str[::-1]  # reverse the result string if needed
+        if data_format == "reverse":
+            sign = ''
+            if result_str.startswith('-') or result_str.startswith('+'):
+                sign = result_str[0]
+                result_str = result_str[1:]
+            result_str = sign + result_str[::-1]  # reverse the result string if needed
 
-        return operands_str, result_str, operation
+        return operands_str, result_str
 
 _precomputed_batches = {}
-def prepare_addition_batches(config, encode, num_digit=3, zero_pad=False, reverse_c=False, binary=False,  data_type='binary', 
+def prepare_addition_batches(config, encode, num_digit=3, zero_pad=False, binary=False,  data_type='binary', 
                              operator='+', data_format='plain', add_space=False, simple=False, mode: str = "compute_gold"):
     device = config['device']
     test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
@@ -111,10 +111,10 @@ def prepare_addition_batches(config, encode, num_digit=3, zero_pad=False, revers
         prompt_length = x.size(1)
 
         # parse out gold for evaluation later
-        operands, result, op = get_abc_new(
+        operands, result= get_abc_new(
             line,
             zero_pad=zero_pad,
-            reverse_c=reverse_c,
+            data_format=data_format,
             binary=binary,
             mode=mode
         )
@@ -140,7 +140,7 @@ def prepare_addition_batches(config, encode, num_digit=3, zero_pad=False, revers
 
 # Modified evaluation function that uses pre-created batches
 def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
-                                  verbose=False, num_digit=3, zero_pad=False, reverse_c=False,
+                                  verbose=False, num_digit=3, zero_pad=False, data_format='plain',
                                   add_space=False, operator='+', verbose_correct=False, analyze=False, mode: str = "compute_gold"):
     model.eval()
     device = config['device']
@@ -173,7 +173,12 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
         with torch.no_grad():
             with ctx:
                 eos_id = config['eos_id']
-                y = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k)
+                y = model.generate(
+                    x,
+                    max_new_tokens,
+                    temperature=temperature,
+                    top_k=top_k
+                )
                 outcome_list = [decode(y_i.tolist()) for y_i in y]
 
                 for i, outcome in enumerate(outcome_list):
@@ -188,7 +193,7 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
                         # plain addition
                         c_hat = c_hat.split('\n')[0]
 
-                        if reverse_c:
+                        if data_format == "reverse":
                             c_hat = reverse_string(c_hat)
 
                         if add_space:
@@ -205,23 +210,26 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
                     if mode == "read_gold_as_str":
                         c_hat = outcome.split('=')[1].split('$')[0].strip()
 
-                        if reverse_c:
-                            c_hat = reverse_string(c_hat)
+                        if data_format == "reverse":
+                            sign = ''
+                            if c_hat.startswith('-') or c_hat.startswith('+'):
+                                sign = c_hat[0]
+                                c_hat = c_hat[1:]
+                            c_hat = sign + c_hat[::-1]
 
                     # Check correctness
-                    if op in ['+', '-', '*']:
-                        if result == c_hat:
-                            correct += 1
-                            correct_examples.append((operands, result, outcome, c_hat))
-                            if verbose_correct:
-                                print('outputs(o): ', outcome)
-                                print(f'correct: {operands}={result}')
-                        else:
-                            incorrect_examples.append((operands, result, outcome, c_hat))
-                            if verbose:
-                                print('outputs(x): ', outcome)
-                                print(f'wrong  : {operands}={c_hat}')
-                                print(f'correct: {operands}={result}')
+                    if result == c_hat:
+                        correct += 1
+                        correct_examples.append((operands, result, outcome, c_hat))
+                        if verbose_correct:
+                            print('outputs(o): ', outcome)
+                            print(f'correct: {operands}={result}')
+                    else:
+                        incorrect_examples.append((operands, result, outcome, c_hat))
+                        if verbose:
+                            print('outputs(x): ', outcome)
+                            print(f'wrong  : {operands}={c_hat}')
+                            print(f'correct: {operands}={result}')
                     # Calculate metrics if analyzing
                     if analyze:
                         error_dict['y'].append(result)
@@ -267,10 +275,10 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
 
 # Keep the original function for backward compatibility, but make it use the new functions
 def evaluate_addition_batch(config, model, ctx, encode, decode, verbose=False, num_digit=3, zero_pad=False, 
-                          reverse_ab=False, reverse_c=False, data_type='binary', operator='+', 
+                          data_type='binary', operator='+', 
                           data_format='plain', add_space=False, verbose_correct=False, analyze=False, mode: str = "compute_gold"):
     config_hash = hash(frozenset({k: str(v) for k, v in config.items() if k != 'device'}.items()))
-    batch_key = f"{config_hash}_{data_type}_{operator}_{num_digit}_{zero_pad}_{reverse_ab}_{data_format}_{add_space}"
+    batch_key = f"{config_hash}_{data_type}_{operator}_{num_digit}_{zero_pad}_{data_format}_{add_space}"
     
     if batch_key in _precomputed_batches:
         print("Using precomputed batches")
@@ -278,19 +286,19 @@ def evaluate_addition_batch(config, model, ctx, encode, decode, verbose=False, n
     else:
         print("Creating new batches")
         batch_list, total = prepare_addition_batches(
-            config, encode, num_digit=num_digit, zero_pad=zero_pad, reverse_c=reverse_c,
+            config, encode, num_digit=num_digit, zero_pad=zero_pad,
             data_type=data_type, operator=operator, data_format=data_format, add_space=add_space, mode=mode
         )
 
     # Evaluate using the batches
     return evaluate_addition_precomputed(
         config, model, ctx, decode, batch_list, total, verbose=verbose,
-        num_digit=num_digit, zero_pad=zero_pad, reverse_c=reverse_c,
+        num_digit=num_digit, zero_pad=zero_pad, data_format=data_format,
         add_space=add_space, operator=operator, verbose_correct=verbose_correct, analyze=analyze, mode=mode
     )
 
 def evaluate_multiple_files(config, model, ctx, encode, decode, test_file, iter_num, result_dir,
-                          verbose=False, num_digit=3, zero_pad=False, reverse_ab=False, reverse_c=False,
+                          verbose=False, num_digit=3, zero_pad=False,
                           data_type='binary', operator='+', data_format='plain', add_space=False, analyze=False, mode: str = "compute_gold"):
     """
     Evaluate model on multiple test files and store results.
@@ -312,7 +320,6 @@ def evaluate_multiple_files(config, model, ctx, encode, decode, test_file, iter_
     accuracy, metrics, correct, incorrect = evaluate_addition_batch(
         config, model, ctx, encode=encode, decode=decode,
         verbose=verbose, num_digit=num_digit, zero_pad=zero_pad,
-        reverse_ab=reverse_ab, reverse_c=reverse_c,
         data_type=data_type, operator=operator,
         data_format=data_format, analyze=analyze, mode=mode
     )
@@ -331,28 +338,35 @@ def evaluate_multiple_files(config, model, ctx, encode, decode, test_file, iter_
         f'pred_iter_{iter_num}': [ex[3] for ex in all_examples]
     })
     
-    # Read existing results if file exists and merge
+        # --- before merging: ensure consistent types and remove duplicates ---
     if os.path.exists(results_file):
-        old_df = pd.read_csv(results_file)
-        # # Merge based on operands, keeping all predictions
-        # if 'operands' in old_df.columns:
-        #     merged_df = pd.merge(old_df, new_df, on=['operands', 'actual'], how='outer')
-        # else:
-        #     merged_df = new_df
-        # ── Normalize keys so they truly match ──
+        old_df = pd.read_csv(results_file, dtype={'operands': str, 'actual': str}, low_memory=False)
+        
+        # normalize strings
         for df in (old_df, new_df):
-            # strip whitespace from the operands strings
-            df['operands'] = df['operands'].str.strip()
-            # ensure actual is an integer
-            df['actual']   = df['actual'].astype(int)
+            df['operands'] = df['operands'].astype(str).str.strip()
+            df['actual']   = df['actual'].fillna('').astype(str).str.strip()
 
-        merged_df = pd.merge(
-            old_df, new_df,
-            on=['operands', 'actual'],
-            how='outer'
-        )
+        # drop exact duplicate rows on key columns to avoid many-to-many merges
+        old_df = old_df.drop_duplicates(subset=['operands', 'actual'])
+        new_df = new_df.drop_duplicates(subset=['operands', 'actual'])
+
+        # set multi-index and join (this avoids Cartesian duplication)
+        old_idx = old_df.set_index(['operands', 'actual'])
+        new_idx = new_df.set_index(['operands', 'actual'])
+
+        # do the join; new columns will be added, existing columns preserved
+        merged_idx = old_idx.join(new_idx, how='outer')
+
+        # optional: sanity check that the join didn't blow up
+        if len(merged_idx) > len(old_idx) + len(new_idx):
+            # this is a conservative check; it triggers if many-to-many occurred
+            print(f"Warning: merged size {len(merged_idx)} > old+new ({len(old_idx)}+{len(new_idx)}) — check duplicate keys!")
+
+        merged_df = merged_idx.reset_index()
     else:
         merged_df = new_df
+
     
     # Save results
     merged_df.to_csv(results_file, index=False)

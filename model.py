@@ -109,11 +109,12 @@ class GPTConfig:
 
 
 class GPT(nn.Module):
-  def __init__(self,config):
+  def __init__(self,config, pad_id):
     super().__init__()
     assert config.vocab_size is not None
     assert config.block_size is not None
     self.config = config
+    self.pad_id = pad_id
 
     self.transformer = nn.ModuleDict(dict(
         wte = nn.Embedding(config.vocab_size, config.n_embd),
@@ -162,7 +163,9 @@ class GPT(nn.Module):
 
     if targets is not None:
       logits = self.lm_head(x)
-      loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index = -1)
+      logits = logits.view(-1, logits.size(-1))   # (B*L, V)
+      targets = targets.view(-1)                  # (B*L,)
+      loss = F.cross_entropy(logits, targets, ignore_index=self.pad_id)
     else:
       logits = self.lm_head(x[:,[-1],:])
       loss = None

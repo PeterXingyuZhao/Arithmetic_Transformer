@@ -1,5 +1,5 @@
 # to edit: do an evaluation every {eval_interval} iterations
-eval_interval = 1000
+eval_interval = 50
 eval_iters = 1
 always_save_checkpoint = True
 
@@ -8,7 +8,7 @@ wandb_log = True # override via command line if you like
 wandb_project = 'addition'
 
 # to edit: wandb run name
-wandb_run_name = '4_operands_0_to_999_first_phase_change'
+wandb_run_name = '2_operands_0_to_999_subtraction_balanced_digit_reverse'
 
 # baby GPT model :)
 n_layer = 6
@@ -18,7 +18,7 @@ dropout = 0.2
 
 # to edit: 'plain' or 'reverse' or 'algo_reasoning'
 data_format='reverse'
-operator='+'
+operator='-'
 dataset = 'bal'
 batch_size = 512
 block_size = 32 # context of up to 256 previous characters
@@ -27,7 +27,7 @@ block_size = 32 # context of up to 256 previous characters
 init_from = 'scratch'
 iter_num = 0
 # to edit: the checkpoint from which to resume training
-ckpt_path_name = 'ckpt_iter_19000_acc.pt'
+ckpt_path_name = 'ckpt_2_operands_0_to_999_their_training_data_plain.pt'
 
 # to edit: whether the result is reversed
 reverse_c = True
@@ -35,7 +35,7 @@ eval_addition = True
 
 analysis = False
 
-# to edit: num of digits in each operand
+# to edit: max number of digits in each operand
 num_digit = 3
 
 # to edit: maximum number of output tokens (including '$')
@@ -50,8 +50,8 @@ zero_pad = False
 learning_rate = 1e-3
 
 # to edit: the number of training iterations
-max_iters = 15000
-lr_decay_iters = 15000 # make equal to max_iters usually (300000)
+max_iters = 5000
+lr_decay_iters = 5000 # make equal to max_iters usually
 
 beta1 = 0.9
 beta2 = 0.98
@@ -61,20 +61,20 @@ warmup_iters = 100
 device='cuda:0'
 
 # to edit: the output directory
-out_dir = '/content/drive/MyDrive/addition/results/4_operands_0_to_999_first_phase_change/reverse_out'
+out_dir = '/content/drive/MyDrive/addition/results/2_operands_0_to_999_subtraction_balanced_digit/reverse_out'
 
 # to edit: training data
-train_data_path = '/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform_wo_padding/train_reverse.txt'
+train_data_path = '/content/drive/MyDrive/addition/data/2_operands_0_to_999_subtraction_balanced_digit/train_reverse.txt'
 
 # to edit: whether do evaluation on training data to see if the model is simply memorizing
 eval_addition_train = True
-start_train = "/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform_wo_padding/train_eval_reverse.txt"
+start_train = "/content/drive/MyDrive/addition/data/2_operands_0_to_999_subtraction_balanced_digit/train_eval_reverse.txt"
 
 # to edit: validation data
-val_data_path = '/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform_wo_padding/val_reverse.txt'
+val_data_path = '/content/drive/MyDrive/addition/data/2_operands_0_to_999_subtraction_balanced_digit/val_reverse.txt'
 
 # to edit: test data; start is just the test file. It can be either without gold (thus gold by computing) or with gold (thus gold by reading)
-test_file_path = '/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform_wo_padding/test_reverse/test_reverse.txt'
+test_file_path = '/content/drive/MyDrive/addition/data/2_operands_0_to_999_subtraction_balanced_digit/test_reverse/test_reverse.txt'
 
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
 mode = "read_gold_as_str"
@@ -82,11 +82,11 @@ mode = "read_gold_as_str"
 # to edit: whether to do more frequenly evaluations in early stages
 more_early_eval1 = False
 early_eval_interval1 = 25
-early_eval_border1 = 1000
+early_eval_iters1 = 3000
 
 more_early_eval2 = False
 early_eval_interval2 = 5
-early_eval_border2 = 750
+early_eval_iters2 = 750
 
 # to edit: whether do mutual information measurement between diffrent pairs of digits (include input-output and output-output)
 mi_measurement = False

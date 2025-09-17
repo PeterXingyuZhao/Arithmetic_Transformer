@@ -30,6 +30,14 @@ def create_meta_for_addition(data):
     # Define the vocabulary for addition problems
     # This includes digits, operators, equals sign, and newline
     chars = sorted(list(set(data)))
+
+    # ensure special eos/pad tokens exist
+    if '$' not in chars:
+        chars.append('$')
+    if '<pad>' not in chars:
+        chars.append('<pad>')
+    chars = sorted(chars)
+
     vocab_size = len(chars)
     # Create encoder and decoder dictionaries
     stoi = {ch: i for i, ch in enumerate(chars)}
@@ -66,20 +74,27 @@ class AdditionDataset(Dataset):
         self.meta = meta
         # Read the text file
         with open(file_path, 'r') as f:
-            self.lines = f.readlines()
+            raw_lines = [line.strip() for line in f.readlines() if line.strip()]
         # Remove any empty lines and strip whitespace
-        self.lines = [line.strip() for line in self.lines if line.strip()]
+        self.lines = [line if line.endswith('$') else line + '$' for line in raw_lines]
         self.block_size = block_size  # from your config
+        # pad/eos ids from meta
+        self.pad_id = self.meta['stoi'].get('<pad>')
+        if self.pad_id is None:
+            raise ValueError("pad token '<pad>' not found in meta['stoi']")
+        self.eos_id = self.meta['stoi'].get('$')
+        if self.eos_id is None:
+            raise ValueError("eos token '$' not found in meta['stoi']")
         
     def __len__(self):
         return len(self.lines)
     
     def __getitem__(self, idx):
-        line = self.lines[idx]
+        line_with_trailing_eos = self.lines[idx]
         # Convert the line to tensor using our encoder
-        raw = encode_addition(line, self.meta)
-        x = pad_sequence(raw[:-1], self.block_size, pad_value=meta['stoi']['$'])  # all but last char
-        y = pad_sequence(raw[1:], self.block_size, pad_value=-1)   # all but first char
+        raw = encode_addition(line_with_trailing_eos, self.meta)  # raw ends with eos_id
+        x = pad_sequence(raw[:-1], block_size, pad_value=self.pad_id)
+        y = pad_sequence(raw[1:],  block_size, pad_value=self.pad_id)  # -100 is ignore_index
         return x, y
 
 # I/O
@@ -125,19 +140,13 @@ eval_text = False # if True get perplexity using eval_text_data_path
 eval_text_data_path = None # directory to text data (.bin file) - ex. 'data/shakespeare_add_ar_mixed/val_text.bin'
 eval_addition = False # if True compute test accuracy of "a+b="
 test_file_path = None
-eval_addition_ar = False
-start_ar = None
 eval_other = False # use this to evaluate other operations (ex. train on operator '-' but evaluate on other_operator '+')
-start_other = None
 other_operator = '+'
 eval_addition_train = False
-start_train = None
-reverse_ab = False
-reverse_c = False
+train_data_test_path = None
 zero_pad = False
 algo_reason = False
 add_space = False
-analysis = False
 
 # model
 n_layer = 6
@@ -256,38 +265,44 @@ with open(val_data_path, 'r') as f:
 # Create metadata from the combined data
 all_data = train_data + val_data
 meta = create_meta_for_addition(train_data)
+
+# meta already created above
+pad_id = meta['stoi']['<pad>']
+eos_id = meta['stoi']['$']
+# expose these in config for other code to use
+config['pad_id'] = pad_id
+config['eos_id'] = eos_id
+
 meta_vocab_size = meta['vocab_size']
 print(f"Using vocabulary size: {meta_vocab_size}")
 
-config['eos_id'] = meta['stoi']['$']
 
-with open(stats_measurement_data_file_path, 'r', encoding='utf-8') as f:
-    lines = [line.rstrip() for line in f]
+if mi_measurement:
+    with open(stats_measurement_data_file_path, 'r', encoding='utf-8') as f:
+        lines = [line.rstrip() for line in f]
 
-if drop_leading_digit:
-        S = num_digit
-else:
-    S = num_digit + 1
-# a simple way to parse test strings
-padded_lines = [] # add 0 padding, remove $; an example padded_lines[6] is '932+084+230+349=5951'
-for i in range(len(lines)):
-    numbers = re.split(r'[+=]', lines[i])
-    numbers[-1] = numbers[-1][:-1]
-    for k, number in enumerate(numbers[:-1]):
-        numbers[k] = '0' * (3-len(number)) + number
-    numbers[-1] = numbers[-1] + '0' * (S-len(numbers[-1]))
-    padded_lines.append("+".join(numbers[:-1]) + "=" + numbers[-1])
+    if drop_leading_digit:
+            S = num_digit
+    else:
+        S = num_digit + 1
+    # a simple way to parse test strings
+    padded_lines = [] # add 0 padding, remove $; an example padded_lines[6] is '932+084+230+349=5951'
+    for i in range(len(lines)):
+        numbers = re.split(r'[+=]', lines[i])
+        numbers[-1] = numbers[-1][:-1]
+        for k, number in enumerate(numbers[:-1]):
+            numbers[k] = '0' * (3-len(number)) + number
+        numbers[-1] = numbers[-1] + '0' * (S-len(numbers[-1]))
+        padded_lines.append("+".join(numbers[:-1]) + "=" + numbers[-1])
 
-stats_measurement_data = torch.cat([encode_addition(padded_lines[i], meta).unsqueeze(0) for i in range(len(padded_lines))], dim=0)
+    stats_measurement_data = torch.cat([encode_addition(padded_lines[i], meta).unsqueeze(0) for i in range(len(padded_lines))], dim=0)
 
 # # get 16 different datasets (including the base dataset) by randomizing input/output integers of the base dataset
 # stats_measurement_dataset_list = gen_randomized_datasets(
 #     stats_measurement_data,
 #     meta,
 #     digits_per_num=num_digit,
-#     base_seed=2005,
-#     reverse_input=reverse_ab,
-#     reverse_output=reverse_c
+#     base_seed=2005
 # )
 
 # init these up here, can override if init_from='resume' (i.e. from a checkpoint)
@@ -307,7 +322,7 @@ if init_from == 'scratch':
         print("defaulting to vocab_size of GPT-2 to 50304 (50257 rounded up for efficiency)")
     model_args['vocab_size'] = meta_vocab_size if meta_vocab_size is not None else 50304
     gptconf = GPTConfig(**model_args)
-    model = GPT(gptconf)
+    model = GPT(gptconf, pad_id)
     model.to(device)
 elif init_from == 'resume':
     if resume_dir:
@@ -624,8 +639,6 @@ while iter_num < max_iters:
                 verbose=False,
                 num_digit=num_digit,
                 zero_pad=zero_pad,
-                reverse_ab=reverse_ab,
-                reverse_c=reverse_c,
                 data_type=data_type,
                 operator=operator,
                 data_format=data_format,
@@ -659,7 +672,7 @@ while iter_num < max_iters:
         # Training data evaluation
         train_accuracy = None
         if eval_addition_train:
-            config['start'] = f"FILE:{start_train}"
+            config['start'] = f"FILE:{train_data_test_path}"
             train_accuracy, _ , correct, incorrect = evaluate_addition_batch(
                 config, model, ctx, 
                 encode=lambda x: encode_addition(x, meta),
@@ -667,8 +680,6 @@ while iter_num < max_iters:
                 verbose=False, 
                 num_digit=num_digit, 
                 zero_pad=zero_pad,
-                reverse_ab=reverse_ab, 
-                reverse_c=reverse_c,
                 data_type=data_type, 
                 operator=operator, 
                 data_format=data_format,
@@ -720,8 +731,6 @@ if eval_addition:
         verbose=False, 
         num_digit=num_digit, 
         zero_pad=zero_pad,
-        reverse_ab=reverse_ab, 
-        reverse_c=reverse_c,
         data_type=data_type, 
         operator=operator, 
         data_format=data_format, 
@@ -750,7 +759,7 @@ if eval_addition:
             writer.writerow({'operands': operands, 'result': result, 'outcome': outcome, 'c_hat2': c_hat2})
 
 if eval_addition_train:
-    config['start'] = f"FILE:{start_train}"
+    config['start'] = f"FILE:{train_data_test_path}"
     train_accuracy, _ , correct, incorrect = evaluate_addition_batch(
         config, model, ctx, 
         encode=lambda x: encode_addition(x, meta),
@@ -758,8 +767,6 @@ if eval_addition_train:
         verbose=False, 
         num_digit=num_digit, 
         zero_pad=zero_pad,
-        reverse_ab=reverse_ab, 
-        reverse_c=reverse_c,
         data_type=data_type, 
         operator=operator, 
         data_format=data_format,
@@ -777,8 +784,6 @@ test_name, accuracy, metrics, correct, incorrect = evaluate_multiple_files(
     verbose=False,
     num_digit=num_digit,
     zero_pad=zero_pad,
-    reverse_ab=reverse_ab,
-    reverse_c=reverse_c,
     data_type=data_type,
     operator=operator,
     data_format=data_format,
