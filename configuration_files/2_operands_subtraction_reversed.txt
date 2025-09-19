@@ -29,12 +29,6 @@ iter_num = 0
 # to edit: the checkpoint from which to resume training
 ckpt_path_name = 'ckpt_2_operands_0_to_999_their_training_data_plain.pt'
 
-# to edit: whether the result is reversed
-reverse_c = True
-eval_addition = True
-
-analysis = False
-
 # to edit: max number of digits in each operand
 num_digit = 3
 
@@ -68,12 +62,13 @@ train_data_path = '/content/drive/MyDrive/addition/data/2_operands_0_to_999_subt
 
 # to edit: whether do evaluation on training data to see if the model is simply memorizing
 eval_addition_train = True
-start_train = "/content/drive/MyDrive/addition/data/2_operands_0_to_999_subtraction_balanced_digit/train_eval_reverse.txt"
+train_data_test_path = "/content/drive/MyDrive/addition/data/2_operands_0_to_999_subtraction_balanced_digit/train_eval_reverse.txt"
 
 # to edit: validation data
 val_data_path = '/content/drive/MyDrive/addition/data/2_operands_0_to_999_subtraction_balanced_digit/val_reverse.txt'
 
 # to edit: test data; start is just the test file. It can be either without gold (thus gold by computing) or with gold (thus gold by reading)
+eval_addition = True
 test_file_path = '/content/drive/MyDrive/addition/data/2_operands_0_to_999_subtraction_balanced_digit/test_reverse/test_reverse.txt'
 
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data

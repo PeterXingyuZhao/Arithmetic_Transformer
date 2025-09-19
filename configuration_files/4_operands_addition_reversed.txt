@@ -16,7 +16,7 @@ n_head = 6
 n_embd = 384
 dropout = 0.2
 
-# to edit: 'plain' or 'reverse' or 'algo_reasoning'
+# to edit: 'plain' or 'reverse' or 'scratchpad' or 'max' or 'sorting'
 data_format='reverse'
 operator='+'
 dataset = 'bal'
@@ -28,12 +28,6 @@ init_from = 'scratch'
 iter_num = 0
 # to edit: the checkpoint from which to resume training
 ckpt_path_name = 'ckpt_iter_19000_acc.pt'
-
-# to edit: whether the result is reversed
-reverse_c = True
-eval_addition = True
-
-analysis = False
 
 # to edit: num of digits in each operand
 num_digit = 3
@@ -61,20 +55,21 @@ warmup_iters = 100
 device='cuda:0'
 
 # to edit: the output directory
-out_dir = '/content/drive/MyDrive/addition/results/4_operands_0_to_999_first_phase_change/reverse_out'
+out_dir = '/content/drive/MyDrive/addition/results/4_operands_0_to_999_uniform_test/reverse_out'
 
 # to edit: training data
-train_data_path = '/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform_wo_padding/train_reverse.txt'
+train_data_path = '/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform/train_reverse.txt'
 
 # to edit: whether do evaluation on training data to see if the model is simply memorizing
 eval_addition_train = True
-start_train = "/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform_wo_padding/train_eval_reverse.txt"
+train_data_test_path = "/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform/train_eval_reverse.txt"
 
 # to edit: validation data
-val_data_path = '/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform_wo_padding/val_reverse.txt'
+val_data_path = '/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform/val_reverse.txt'
 
 # to edit: test data; start is just the test file. It can be either without gold (thus gold by computing) or with gold (thus gold by reading)
-test_file_path = '/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform_wo_padding/test_reverse/test_reverse.txt'
+eval_addition = True
+test_file_path = '/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform/test_reverse.txt'
 
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
 mode = "read_gold_as_str"
