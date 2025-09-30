@@ -297,7 +297,7 @@ def evaluate_addition_batch(config, model, ctx, encode, decode, verbose=False, n
         add_space=add_space, operator=operator, verbose_correct=verbose_correct, analyze=analyze, mode=mode
     )
 
-def evaluate_multiple_files(config, model, ctx, encode, decode, test_file, iter_num, result_dir,
+def evaluate_multiple_files(config, model, ctx, encode, decode, test_files, iter_num, result_dir,
                           verbose=False, num_digit=3, zero_pad=False,
                           data_type='binary', operator='+', data_format='plain', add_space=False, analyze=False, mode: str = "compute_gold"):
     """
@@ -309,78 +309,90 @@ def evaluate_multiple_files(config, model, ctx, encode, decode, test_file, iter_
     Returns:
         dict: Dictionary containing accuracies for each test file
     """
+
+    test_names = []
+    accuracy_multiple_files = {}
+    correct_multiple_files = {}
+    incorrect_multiple_files = {}
+
+    for test_file in test_files:
     
-    # Get test file name without path and extension
-    test_name = os.path.splitext(os.path.basename(test_file))[0]
-    
-    # Set the current test file as start
-    config['start'] = f"FILE:{test_file}"
-    
-    # Run evaluation
-    accuracy, metrics, correct, incorrect = evaluate_addition_batch(
-        config, model, ctx, encode=encode, decode=decode,
-        verbose=verbose, num_digit=num_digit, zero_pad=zero_pad,
-        data_type=data_type, operator=operator,
-        data_format=data_format, analyze=analyze, mode=mode
-    )
-    
-    # Path for this test file's results
-    results_file = os.path.join(result_dir, f'{test_name}_results.csv')
-    
-    # Combine correct and incorrect examples and sort by operands to maintain consistent order
-    all_examples = correct + incorrect
-    all_examples.sort(key=lambda x: x[0])  # Sort by operands
-    
-    # Create new DataFrame with operands and actual results
-    new_df = pd.DataFrame({
-        'operands': [ex[0] for ex in all_examples],
-        'actual': [ex[1] for ex in all_examples],
-        f'pred_iter_{iter_num}': [ex[3] for ex in all_examples]
-    })
-    
-        # --- before merging: ensure consistent types and remove duplicates ---
-    if os.path.exists(results_file):
-        old_df = pd.read_csv(results_file, dtype={'operands': str, 'actual': str}, low_memory=False)
+        # Get test file name without path and extension
+        test_name = os.path.splitext(os.path.basename(test_file))[0]
+        test_names.append(test_name)
         
-        # normalize strings
-        for df in (old_df, new_df):
-            df['operands'] = df['operands'].astype(str).str.strip()
-            df['actual']   = df['actual'].fillna('').astype(str).str.strip()
+        # Set the current test file as start
+        config['start'] = f"FILE:{test_file}"
+        
+        # Run evaluation
+        accuracy, _, correct, incorrect = evaluate_addition_batch(
+            config, model, ctx, encode=encode, decode=decode,
+            verbose=verbose, num_digit=num_digit, zero_pad=zero_pad,
+            data_type=data_type, operator=operator,
+            data_format=data_format, analyze=analyze, mode=mode
+        )
 
-        # drop exact duplicate rows on key columns to avoid many-to-many merges
-        old_df = old_df.drop_duplicates(subset=['operands', 'actual'])
-        new_df = new_df.drop_duplicates(subset=['operands', 'actual'])
+        accuracy_multiple_files[test_name] = accuracy
+        correct_multiple_files[test_name] = correct
+        incorrect_multiple_files[test_name] = incorrect
+        
+        # Path for this test file's results
+        results_file = os.path.join(result_dir, f'{test_name}_results.csv')
+        
+        # Combine correct and incorrect examples and sort by operands to maintain consistent order
+        all_examples = correct + incorrect
+        all_examples.sort(key=lambda x: x[0])  # Sort by operands
+        
+        # Create new DataFrame with operands and actual results
+        new_df = pd.DataFrame({
+            'operands': [ex[0] for ex in all_examples],
+            'actual': [ex[1] for ex in all_examples],
+            f'pred_iter_{iter_num}': [ex[3] for ex in all_examples]
+        })
+        
+            # --- before merging: ensure consistent types and remove duplicates ---
+        if os.path.exists(results_file):
+            old_df = pd.read_csv(results_file, dtype={'operands': str, 'actual': str}, low_memory=False)
+            
+            # normalize strings
+            for df in (old_df, new_df):
+                df['operands'] = df['operands'].astype(str).str.strip()
+                df['actual']   = df['actual'].fillna('').astype(str).str.strip()
 
-        # set multi-index and join (this avoids Cartesian duplication)
-        old_idx = old_df.set_index(['operands', 'actual'])
-        new_idx = new_df.set_index(['operands', 'actual'])
+            # drop exact duplicate rows on key columns to avoid many-to-many merges
+            old_df = old_df.drop_duplicates(subset=['operands', 'actual'])
+            new_df = new_df.drop_duplicates(subset=['operands', 'actual'])
 
-        # do the join; new columns will be added, existing columns preserved
-        merged_idx = old_idx.join(new_idx, how='outer')
+            # set multi-index and join (this avoids Cartesian duplication)
+            old_idx = old_df.set_index(['operands', 'actual'])
+            new_idx = new_df.set_index(['operands', 'actual'])
 
-        # optional: sanity check that the join didn't blow up
-        if len(merged_idx) > len(old_idx) + len(new_idx):
-            # this is a conservative check; it triggers if many-to-many occurred
-            print(f"Warning: merged size {len(merged_idx)} > old+new ({len(old_idx)}+{len(new_idx)}) — check duplicate keys!")
+            # do the join; new columns will be added, existing columns preserved
+            merged_idx = old_idx.join(new_idx, how='outer')
 
-        merged_df = merged_idx.reset_index()
-    else:
-        merged_df = new_df
+            # optional: sanity check that the join didn't blow up
+            if len(merged_idx) > len(old_idx) + len(new_idx):
+                # this is a conservative check; it triggers if many-to-many occurred
+                print(f"Warning: merged size {len(merged_idx)} > old+new ({len(old_idx)}+{len(new_idx)}) — check duplicate keys!")
 
+            merged_df = merged_idx.reset_index()
+        else:
+            merged_df = new_df
+
+        
+        # Save results
+        merged_df.to_csv(results_file, index=False)
+        
+        # Save accuracy separately in a summary file
+        accuracy_file = os.path.join(result_dir, f'{test_name}_accuracy.csv')
+        if os.path.exists(accuracy_file):
+            acc_df = pd.read_csv(accuracy_file)
+        else:
+            acc_df = pd.DataFrame(columns=['iteration', 'accuracy'])
+        
+        # Add new accuracy
+        new_row = pd.DataFrame({'iteration': [iter_num], 'accuracy': [accuracy]})
+        acc_df = pd.concat([acc_df, new_row], ignore_index=True)
+        acc_df.to_csv(accuracy_file, index=False)
     
-    # Save results
-    merged_df.to_csv(results_file, index=False)
-    
-    # Save accuracy separately in a summary file
-    accuracy_file = os.path.join(result_dir, f'{test_name}_accuracy.csv')
-    if os.path.exists(accuracy_file):
-        acc_df = pd.read_csv(accuracy_file)
-    else:
-        acc_df = pd.DataFrame(columns=['iteration', 'accuracy'])
-    
-    # Add new accuracy
-    new_row = pd.DataFrame({'iteration': [iter_num], 'accuracy': [accuracy]})
-    acc_df = pd.concat([acc_df, new_row], ignore_index=True)
-    acc_df.to_csv(accuracy_file, index=False)
-    
-    return test_name, accuracy, metrics, correct, incorrect
+    return test_names, accuracy_multiple_files, correct_multiple_files, incorrect_multiple_files

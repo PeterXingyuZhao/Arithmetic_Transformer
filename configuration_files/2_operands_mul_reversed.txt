@@ -3,12 +3,11 @@ eval_interval = 100
 eval_iters = 1
 always_save_checkpoint = True
 
-
 wandb_log = True # override via command line if you like
 wandb_project = 'multiplication'
 
 # to edit: wandb run name
-wandb_run_name = '0_to_six_digit_times_1_digit_reverse'
+wandb_run_name = '0_to_999999_times_1_digit_reverse'
 
 # baby GPT model :)
 n_layer = 6
@@ -25,20 +24,17 @@ block_size = 32 # context of up to 256 previous characters
 
 # to edit: 'scratch' or 'resume', whether train from scratch or resume from a saved checkpoint
 init_from = 'scratch'
+iter_num = 0
 # to edit: the checkpoint from which to resume training
 ckpt_path_name = 'ckpt_2_operands_0_to_999_their_training_data_plain.pt'
-
-# to edit: whether the result is reversed
-reverse_c = True
-eval_addition = True
-
-analysis = False
 
 # to edit: max number of digits in each operand
 num_digit = 6
 
 # to edit: maximum number of output tokens (including '$')
 max_new_tokens = 8
+
+drop_leading_digit = False
 
 # whether need zero‐padding
 zero_pad = False
@@ -57,32 +53,29 @@ warmup_iters = 100
 # ===== Device ===== #
 device='cuda:0'
 
-# to edit: the output directory
-out_dir = '/content/drive/MyDrive/addition/0_to_six_digit_times_1_digit/reverse_out'
+# to edit: the output directory; Path is relative to the project's main directory. 
+# For example, the project's main directory might be "/content/drive/MyDrive/addition/"
+out_dir = 'results/0_to_999999_times_1_digit_test/reverse_out'
+
+# to edit: data directory; Path is relative to the project's main directory. 
+data_dir = 'data/0_to_999999_times_1_digit_test/'
 
 # to edit: training data
-train_data_path = '/content/drive/MyDrive/addition/data/0_to_six_digit_times_1_digit/0_to_six_digit_times_1_digit_bal_train_reverse.txt'
+train_data_name = 'train_reverse.txt'
 
 # to edit: whether do evaluation on training data to see if the model is simply memorizing
 eval_addition_train = True
-start_train = "FILE:/content/drive/MyDrive/addition/data/0_to_six_digit_times_1_digit/0_to_six_digit_times_1_digit_bal_train_eval.txt"
+train_data_test_name = "train_eval_reverse.txt"
 
-# to edit: valuation data
-val_data_path = '/content/drive/MyDrive/addition/data/0_to_six_digit_times_1_digit/0_to_six_digit_times_1_digit_bal_validation_reverse.txt'
+# to edit: validation data
+val_data_name = 'val_reverse.txt'
 
-# to edit: test data (start is just the test file)
-start = 'FILE:/content/drive/MyDrive/addition/data/0_to_six_digit_times_1_digit/test/0_to_six_digit_times_1_digit_bal_test.txt'
+# to edit: test data; It can be either without gold (thus gold by computing) or with gold (thus gold by reading)
+# "test_file_name" can be either a single file, or the name of the directory that contains multiple test files 
+# If it's a directory, "main_test_name" is the name of the test file (without extension) that's to be displayed in wandb
+eval_addition = True
+test_file_name = 'test_reverse.txt'
+main_test_name = "test"
 
-# (optional param) to_edit: whether to enable detailed metric recording at each eval_interval
-# test_dir: the directory storing test files
-test_dir = '/content/drive/MyDrive/addition/data/0_to_six_digit_times_1_digit/test'
-eval_additional_test = True  # whether to evaluate on additional test files 
-
-# to edit: whether to do more frequenly evaluations in early stages
-more_early_eval1 = True
-early_eval_interval1 = 5
-early_eval_iters1 = 1000
-
-more_early_eval2 = False
-early_eval_interval2 = 5
-early_eval_iters2 = 750
+# to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
+mode = "read_gold_as_str"

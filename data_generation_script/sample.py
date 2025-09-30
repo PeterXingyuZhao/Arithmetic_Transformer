@@ -1,19 +1,15 @@
 """
-Sample N lines from a large training‐data file and strip off the ‘answer’ section.
+Sample N lines from a large training‐data file.
 
 Training data is expected to be in the form of:
     927+812+774+113=2626$
     617+990+518+280=2405$
 
 Usage:
-    python sample_and_strip.py \
-    --input train_data.txt \
-    --output train_eval_data.txt \
+    python sample.py \
+    --input train.txt \
+    --output train_eval.txt \
     --sample-size 10000
-
-This will produce an train_eval_data.txt containing 10 000 lines, each of the form
-927+812+774+113=
-617+990+518+280=
 """
 import argparse
 import random

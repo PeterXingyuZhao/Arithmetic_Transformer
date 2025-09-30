@@ -24,198 +24,6 @@ from evaluation import *
 from statistical_measurements import *
 
 import re
-from pathlib import Path as _Path
-# I/O
-
-out_dir = '/drive/MyDrive/addition/plain_no_pad/out'
-resume_dir = None
-resume_iter = False # if True, resume from saved iter_num, otherwise resume from iter_num 0
-eval_interval = 2000
-log_interval = 1
-eval_iters = 200
-eval_only = False # if True, script exits right after the first eval
-always_save_checkpoint = True # if True, always save a checkpoint after each eval
-init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
-
-# wandb logging
-wandb_entity = 'ssdd'
-wandb_log = False # disabled by default
-wandb_project = 'owt'
-wandb_run_name = 'gpt2' # 'run' + str(time.time())
-exp_name = 'default_exp_name'
-
-# data
-dataset = 'bal'
-gradient_accumulation_steps = 1 # used to simulate larger batch sizes
-test_batch_size = 128
-batch_size = 12 # if gradient_accumulation_steps > 1, this is the micro-batch size
-block_size = 1024
-data_dir = 'data/4_operands_0_to_999_uniform/'
-train_data_name = 'train.txt'
-train_data_test_name = "train_eval.txt"
-val_data_name = 'val.txt'
-test_file_name = 'test.txt'
-main_test_name = "test" # if test_file_path is a directory, this is the name of the test file to be displayed in wandb
-multi_digit = False
-num_digit = 3
-max_new_tokens = 5
-binary = False
-
-eval_addition = False # if True compute test accuracy of "a+b="
-
-eval_other = False # use this to evaluate other operations (ex. train on operator '-' but evaluate on other_operator '+')
-other_operator = '+'
-eval_addition_train = False
-zero_pad = False
-algo_reason = False
-add_space = False
-
-# model
-n_layer = 6
-n_head = 6
-n_embd = 768
-dropout = 0.0 # for pretraining 0 is good, for finetuning try 0.1+
-bias = False # do we use bias inside LayerNorm and Linear layers?
-ckpt_path_name = 'ckpt.pt'
-save_final = True
-
-# adamw optimizer
-learning_rate = 6e-4 # max learning rate
-max_iters = 600000 # total number of training iterations
-weight_decay = 1e-1
-beta1 = 0.9
-beta2 = 0.95
-grad_clip = 1.0 # clip gradients at this value, or disable if == 0.0
-# learning rate decay settings
-decay_lr = True # whether to decay the learning rate
-warmup_iters = 2000 # how many steps to warm up for
-lr_decay_iters = 600000 # should be ~= max_iters per Chinchilla
-min_lr = None # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
-
-# DDP settings
-backend = 'nccl' # 'nccl', 'gloo', etc.
-# system
-device = 'cuda' # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks
-dtype = 'bfloat16' if torch.cuda.is_bf16_supported() else 'float16' # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
-compile = True # use PyTorch 2.0 to compile the model to be faster
-use_flash = True
-data_type = 'binary' # 'binary' by default, can be 'text'
-operator = '+' # can be '+', '-', '*', 'sin', 'sqrt'
-data_shuffle = True
-data_format = 'plain' # 'plain' or 'reverse' or 'algo_reasoning'
-vocabulary = 'all_ascii_chars' # can be 'all_ascii_chars' or 'numbers_only' or 'custom_input_data'
-meta_path_specified = True # use saved meta_file (False if data_type='text')
-eps = 0
-tokenizer = 'char' # by default, use char level tokenizer. but for pretrained models, use openai tokenizer eg: 'gpt2'
-
-simple=False
-random_A=False
-random_C=False
-
-use_lora = False # use lora (from minLoRA)
-print_interval = 2  # if we're using gpt-2 model, I want to see it prompted on text
-
-mode = "compute_gold"  # Mode for evaluation: "compute_gold" or "read_gold_as_str"
-
-more_early_eval1 = False # if True, do early, more frequent eval on train and val data
-early_eval_interval1 = 25
-early_eval_border1 = 1000
-
-more_early_eval2 = False # if True, do even earlier, even more frequent eval on train and val data
-early_eval_interval2 = 5
-early_eval_border2 = 500
-
-# additional statistical measurements
-mi_measurement = False # whether to do mutual information measurement
-early_mi_measure_border = 20000 # border for early mutual information measurement
-early_mi_measure_interval = 1000 # interval for early mutual information measurement
-final_mi_measure_interval = 5000 # interval for final mutual information measurement
-stats_measurement_data_name = '4_operand_addition_stats_measurement_data_reversed.txt'
-
-drop_leading_digit = False
-
-config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str, type(None)))]
-
-# ---- begin: accept either a config file positional OR --task/--experiment_name flags ----
-import argparse as _argparse
-
-# parse only the two special options here, leave the rest for configurator.py
-_cfg_parser = _argparse.ArgumentParser(add_help=False)
-_cfg_parser.add_argument('config_path', nargs='?', help='Optional path to a config file (positional).')
-_cfg_parser.add_argument('--task', choices=['addition', 'multiplication', 'sorting'], help='If provided, load a default config for this task.')
-_cfg_parser.add_argument('--experiment_name', help='If provided with --task, override experiment/data directories with this experiment name.')
-_known_args, _remaining_argv = _arg_parser = _cfg_parser.parse_known_args()
-
-cfg_file_to_load = None
-if _known_args.config_path:
-    # user supplied explicit config file path as first positional argument
-    config_path = "./configuration_files/" + _known_args.config_path
-    cfg_file_to_load = os.path.abspath(config_path)
-elif _known_args.task:
-    # map task -> default config filename (adjust filenames/locations if yours live elsewhere)
-    DEFAULT_CFG_MAP = {
-        'addition': '4_operands_addition_plain.txt',
-        'multiplication': '2_operands_mul_plain.txt',
-        'sorting': '4_operands_sorting.txt',
-    }
-    candidate = DEFAULT_CFG_MAP.get(_known_args.task)
-    
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    cfg_path = os.path.join(base_dir, "configuration_files", candidate)
-    if os.path.exists(cfg_path):
-        cfg_file_to_load = cfg_path
-    else:
-        # not found; warn and continue with built-in defaults
-        print(f"Warning: default config for task '{_known_args.task}' not found at '{cfg_path}'. Using built-in defaults.", file=sys.stderr)
-        cfg_file_to_load = None
-
-# If we found a config file to load, exec it into globals (overrides default variables defined above)
-if cfg_file_to_load:
-    print(f"Loading config file: {cfg_file_to_load}")
-    with open(cfg_file_to_load) as f:
-        print(f.read())
-    exec(open(cfg_file_to_load).read())
-
-    # If user provided --experiment_name, patch data_dir and out_dir to use the new experiment name.
-    if _known_args.experiment_name:
-        new_name = _known_args.experiment_name
-        # attempt to detect the existing 'experiment base' in data_dir (most robust), fallback to out_dir basename
-        old_base = None
-        if 'data_dir' in globals() and isinstance(data_dir, str):
-            old_base = os.path.basename(os.path.normpath(data_dir))
-            if old_base:
-                data_dir = data_dir.replace(old_base, new_name)
-        if 'out_dir' in globals() and isinstance(out_dir, str):
-            if old_base is None:
-                old_base = os.path.basename(os.path.normpath(out_dir))
-            if old_base:
-                out_dir = out_dir.replace(old_base, new_name)
-        print(f"Overrode experiment name -> data_dir='{data_dir}', out_dir='{out_dir}'")
-
-# ---- end: alternate-loading logic ----
-
-# build config dict for logging as before
-config = {k: globals()[k] for k in config_keys}
-
-train_data_path = os.path.join(data_dir, train_data_name)
-train_data_test_path = os.path.join(data_dir, train_data_test_name) if eval_addition_train else None
-val_data_path = os.path.join(data_dir, val_data_name)
-test_file_path = os.path.join(data_dir, test_file_name)
-stats_measurement_data_file_path = os.path.join(data_dir, stats_measurement_data_name) if mi_measurement else None
-
-
-# Apply normalization to the known path variables (if they exist in globals)
-for varname in (
-    "out_dir",
-    "train_data_path",
-    "train_data_test_path",
-    "val_data_path",
-    "test_file_path",
-    "stats_measurement_data_file_path",
-):
-    if varname in globals():
-        globals()[varname] = abs_if_rel(globals()[varname])
-
 
 def create_meta_for_addition(data):
     """Create metadata for addition data."""
@@ -288,6 +96,126 @@ class AdditionDataset(Dataset):
         x = pad_sequence(raw[:-1], block_size, pad_value=self.pad_id)
         y = pad_sequence(raw[1:],  block_size, pad_value=self.pad_id)  # -100 is ignore_index
         return x, y
+
+# I/O
+
+out_dir = '/drive/MyDrive/addition/plain_no_pad/out'
+resume_dir = None
+resume_iter = False # if True, resume from saved iter_num, otherwise resume from iter_num 0
+eval_interval = 2000
+log_interval = 1
+eval_iters = 200
+eval_only = False # if True, script exits right after the first eval
+always_save_checkpoint = True # if True, always save a checkpoint after each eval
+init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
+
+# wandb logging
+wandb_entity = 'ssdd'
+wandb_log = False # disabled by default
+wandb_project = 'owt'
+wandb_run_name = 'gpt2' # 'run' + str(time.time())
+exp_name = 'default_exp_name'
+
+# data
+dataset = 'bal'
+gradient_accumulation_steps = 1 # used to simulate larger batch sizes
+test_batch_size = 128
+batch_size = 12 # if gradient_accumulation_steps > 1, this is the micro-batch size
+block_size = 1024
+train_data_path = 'train.bin'
+val_data_path = 'val.bin'
+multi_digit = False
+num_digit = 3
+max_new_tokens = 5
+binary = False
+
+# using two data - data1 = text / data2 = addition
+train_both = False # use seperate text/add data for train/val (get_batch uses this to sample from two differernt datasets)
+data_ratio = 0.2 # ratio of data_path2 compared with data_path1
+train_data_path2 = 'train_addition.bin' # only used when train_both = True
+val_data_path2 = 'val_addition.bin'
+
+# evaluation
+eval_text = False # if True get perplexity using eval_text_data_path
+eval_text_data_path = None # directory to text data (.bin file) - ex. 'data/shakespeare_add_ar_mixed/val_text.bin'
+eval_addition = False # if True compute test accuracy of "a+b="
+test_file_path = None
+eval_other = False # use this to evaluate other operations (ex. train on operator '-' but evaluate on other_operator '+')
+other_operator = '+'
+eval_addition_train = False
+train_data_test_path = None
+zero_pad = False
+algo_reason = False
+add_space = False
+
+# model
+n_layer = 6
+n_head = 6
+n_embd = 768
+dropout = 0.0 # for pretraining 0 is good, for finetuning try 0.1+
+bias = False # do we use bias inside LayerNorm and Linear layers?
+ckpt_path_name = 'ckpt.pt'
+save_final = True
+
+# adamw optimizer
+learning_rate = 6e-4 # max learning rate
+max_iters = 600000 # total number of training iterations
+weight_decay = 1e-1
+beta1 = 0.9
+beta2 = 0.95
+grad_clip = 1.0 # clip gradients at this value, or disable if == 0.0
+# learning rate decay settings
+decay_lr = True # whether to decay the learning rate
+warmup_iters = 2000 # how many steps to warm up for
+lr_decay_iters = 600000 # should be ~= max_iters per Chinchilla
+min_lr = None # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
+
+# DDP settings
+backend = 'nccl' # 'nccl', 'gloo', etc.
+# system
+device = 'cuda' # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks
+dtype = 'bfloat16' if torch.cuda.is_bf16_supported() else 'float16' # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
+compile = True # use PyTorch 2.0 to compile the model to be faster
+use_flash = True
+data_type = 'binary' # 'binary' by default, can be 'text'
+operator = '+' # can be '+', '-', '*', 'sin', 'sqrt'
+data_shuffle = True
+data_format = 'plain' # 'plain' or 'reverse' or 'algo_reasoning'
+vocabulary = 'all_ascii_chars' # can be 'all_ascii_chars' or 'numbers_only' or 'custom_input_data'
+meta_path_specified = True # use saved meta_file (False if data_type='text')
+eps = 0
+tokenizer = 'char' # by default, use char level tokenizer. but for pretrained models, use openai tokenizer eg: 'gpt2'
+
+simple=False
+random_A=False
+random_C=False
+
+use_lora = False # use lora (from minLoRA)
+print_interval = 2  # if we're using gpt-2 model, I want to see it prompted on text
+
+mode = "compute_gold"  # Mode for evaluation: "compute_gold" or "read_gold_as_str"
+
+more_early_eval1 = False # if True, do early, more frequent eval on train and val data
+early_eval_interval1 = 25
+early_eval_border1 = 1000
+
+more_early_eval2 = False # if True, do even earlier, even more frequent eval on train and val data
+early_eval_interval2 = 5
+early_eval_border2 = 500
+
+stats_measurement_data_file_path = ""
+
+drop_leading_digit = False
+
+config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str, type(None)))]
+exec(open('configurator.py').read()) # overrides from command line or config file
+config = {k: globals()[k] for k in config_keys} # will be useful for logging
+
+# additional statistical measurements
+mi_measurement = False # whether to do mutual information measurement
+early_mi_measure_border = 20000 # border for early mutual information measurement
+early_mi_measure_interval = 1000 # interval for early mutual information measurement
+final_mi_measure_interval = 5000 # interval for final mutual information measurement
 
 mi_measure_iters = set(
     list(range(0,  early_mi_measure_border, early_mi_measure_interval)) +    # every 20 steps before 200
@@ -384,7 +312,7 @@ best_perplexity = 1e9 # on text data
 best_accuracy = -1 # on addition data
 
 try:
-    test_files, main_test_name = gather_test_files(test_file_path, main_test_name)
+    test_files = gather_test_files(test_file_path)
 except Exception as e:
     print("Error:", e)
     sys.exit(1)
@@ -575,13 +503,6 @@ best_val_loss = 1e9
 best_accuracy = -1
 running_mfu = -1.0
 
-# Create infinite data loader
-def get_infinite_dataloader(dataloader):
-    while True:
-        for batch in dataloader:
-            yield batch
-
-train_loader_iter = get_infinite_dataloader(train_loader)
 if 'max_new_tokens' in config.keys():
     print(f"max_new_tokens: {config['max_new_tokens']}")
 else:
@@ -598,7 +519,7 @@ while iter_num < max_iters:
             param_group['lr'] = lr
     
     # Get next batch
-    X, Y = next(train_loader_iter)
+    X, Y = 
     X, Y = X.to(device), Y.to(device)
     
     # Forward pass
@@ -726,7 +647,7 @@ while iter_num < max_iters:
                 mode=mode
             )
 
-            test_accuracy = accuracy_multiple_file.get(main_test_name, None)
+            test_accuracy = accuracy_multiple_file.get("test", None)
 
             # Log results
             print("\nTest Results:")
@@ -806,7 +727,7 @@ losses = estimate_loss()
 
 for test_file in test_files:
     test_name = os.path.splitext(os.path.basename(test_file))[0]
-    if test_name == main_test_name:
+    if test_name == "test":
         standard_test_file_path = test_file
         break
 
@@ -880,7 +801,7 @@ test_names, accuracy_multiple_file, _, _ = evaluate_multiple_files(
 )
 
 print("\nFinal Test Results:")
-print(f"test.txt: {accuracy_multiple_file[main_test_name]:.2f}%")
+print(f"test.txt: {accuracy_multiple_file["test"]:.2f}%")
 print()
 
 
@@ -894,7 +815,7 @@ if wandb_log:
         "test/accuracy": test_accuracy if eval_addition else None,
         "train/accuracy": train_accuracy if eval_addition_train else None,
     }
-    final_dict[f"final_test/accuracy"] = accuracy_multiple_file[main_test_name]
+    final_dict[f"final_test/accuracy"] = accuracy_multiple_file["test"]
     wandb.log(final_dict)
 
 # Save final DataFrame

@@ -1,7 +1,7 @@
 # Arithmetic Transformer — README
 
 A small repo for generating datasets and training transformer-style models on arithmetic tasks (addition, subtraction, sorting, scratchpad formats, etc.).
-This README documents repository layout, a concise quickstart (generate data → move data into data/ → update a config → train/evaluate).
+This README documents repository layout, a concise quickstart (generate data → (optional) update a config → train/evaluate).
 
 ---
 
@@ -9,14 +9,11 @@ This README documents repository layout, a concise quickstart (generate data →
 
 Important files & folders (high level):
 
-- data_generation_script/
-  - data_generation.ipynb — interactive notebook that generates datasets. H1 headings correspond to task categories (e.g. Addition 4 Operand).
-  - sample.py — sample a subset of train data for memorization checks (creates train_eval.txt).
-  - reverse_results.py — produce “reverse” format outputs (aligns transformer next-token prediction with grade-school algorithm).
+- data_generate.py — script for generating training/val/testing data. Highly automated.
 
 - data/ — store datasets here. Each task should get its own subdirectory (e.g. 4_operands_0_to_999_uniform).
 
-- configuration_files/ — prototype config files. Edit one for your task (e.g. 4_operands_addition_reversed.txt).
+- configuration_files/ — prototype config files. Edit one for your task (e.g. 4_operands_addition_plain.txt).
 
 - train.py — (entry point) training script.
 
@@ -24,7 +21,7 @@ Important files & folders (high level):
 
 - results/ — recommended place for trainer outputs (model checkpoints, logs).
 
-- startHere.ipynb — quick-start notebook (check for runtime hints).
+- startHere.ipynb — quick-start notebook.
 
 - other utilities: model.py, main_utilities.py, configurator.py.
 
@@ -32,59 +29,65 @@ Important files & folders (high level):
 
 ## 2 — Quickstart example (4-operand 0–999 addition, reverse format)
 
-Follow these steps to go from data generation to training.
+Follow two simple steps to get the model start training.
 
 ### 2.1 Generate data
-1. Open data_generation_script/data_generation.ipynb.
-2. Find the H1 heading "Addition 4 Operand". Under that H1 there are subheadings for variations. To generate 4-operand 0–999 addition without padding locate the subheading "Generate 4 Operand 0-999 without Paddin"g and run the corresponding cell(s).
-3. The notebook will write three files to the current working directory (where the notebook runs):
 
-```
-   train.txt
-   val.txt
-   test.txt
-```
+Run the data_generate.py file with desired arguments.
 
-(Watch the notebook output messages — they show the exact write locations.)
-
-### 2.2 (Optional) Sample a subset of training data for memorization checks
-Under the H1 heading Sample Train Eval Data & Reverse Result Script, run the sample command (or run sample.py directly). Example:
-
-```python
-# produce a small train_eval set (3000 examples)
-python data_generation_script/sample.py \
-  --input ./train.txt \
-  --output ./train_eval.txt \
-  --sample-size 3000
+Usage:
+```bash
+python data_generate.py --task <task> --num_operands <n> --experiment_name <name> \
+[--output_path <path>] [--train_size N] [--test_size N] [--val_size N] \
+[--train_eval] [--sample-size N] [--generate_reverse]
 ```
 
-
-### 2.3 (Optional) Create reverse-format datasets
-To create the reverse-format datasets (so the model predicts the result in the reversed alignment), run the reverse script (from the same H1 section). That will output files like:
-
-```
-train_reverse.txt
-train_eval_reverse.txt
-val_reverse.txt
-test_reverse.txt
+Example:
+```bash
+python data_generate.py --task addition --num_operands 4 --experiment_name 4_operands_0_to_999_uniform \
+--train_size 1000000 --test_size 10000 --val_size 10000 --train_eval True --sample-size 10000 --generate_reverse True
 ```
 
-### 2.4 Move data into data/
-Create a directory under data/ named for the task (example):
+#### Arguments (explanation)
 
-```python
-mkdir -p data/4_operands_0_to_999_uniform
-```
+- `--task` **(required)**
+  Which generation task to run. Supported: `addition`, `multiplication`, `sorting`. The code will select the generator script under `data_generation_script/individual_task_scripts/`.
 
-Then move the generated files into that directory:
+- `--num_operands` *(int, default: `4`)*
+  Number of operands to generate (e.g. `2`, `3`, `4`). **Note:** this flag is forwarded **only** to generators that accept it (e.g. the addition generator). If a generator does not accept `--num_operands`, it will be ignored.
 
-```python
-mv train.txt val.txt test.txt train_reverse.txt val_reverse.txt test_reverse.txt data/4_operands_0_to_999_uniform/
-# and train_eval.txt, train_eval_reverse.txt if you created it
-```
----
+- `--experiment_name` **(required)**
+  Logical name of the experiment. The script will write results to the location:
+  <project_root>/data/<experiment_name>/
 
-## 3 — Configure the model
+- `--train_size` *(int, default: `1_000_000`)*
+  Number of training samples to generate.
+
+- `--test_size` *(int, default: `10_000`)*
+  Number of test samples to generate.
+
+- `--val_size` *(int, default: `10_000`)*
+  Number of validation samples to generate.
+
+- `--train_eval` *(boolean-like: True / False, default: False)*
+  When True, after generation the script will run sample.py to create a train_eval.txt file sampled from train.txt. Accepted true values (case-insensitive): "true", "1", "yes". Any other value is treated as False.
+
+- `--sample-size` *(int, default: 10000)*
+  Number of lines to sample from train.txt when --train_eval is True. Passed to sample.py.
+
+- `--generate_reverse` *(boolean-like: True / False, default: False)*
+  When True the script will run reverse_results.py at the end to produce reverse-format files. Note: not every task may support the reverse step — the dispatcher checks whether the chosen task enables generate_reverse. Accepted true values (case-insensitive): "true", "1", "yes".
+
+#### Output files (what to expect)
+
+- The generator writes files into the directory: data/<experiment_name>:
+  * train.txt
+  * test.txt
+  * val.txt
+- If --train_eval True, a sampled train_eval.txt will also be created in the same directory.
+- If --generate_reverse True and the task supports it, reverse_results.py is run on the generated files and additional reverse-format files are produced in the same directory.
+
+### 2.2 (Optional) Configure the model
 
 1. Open an existing proto-config in configuration_files/, e.g. 4_operands_addition_reversed.txt.
 2. Edit the fields below (common ones you will likely change):
@@ -94,23 +97,32 @@ mv train.txt val.txt test.txt train_reverse.txt val_reverse.txt test_reverse.txt
 - data_format — one of: plain, reverse, scratchpad, max, sorting. For reverse-format tasks set: reverse.
 - max_new_tokens — maximum output tokens. For 4-operand addition set at least 5.
 - max_iters — number of training iterations. Recommend at least 200000.
-- out_dir — output directory for this run (e.g. results/4_operands_0_to_999_uniform/).
-- train_data_path — path to training .txt file (e.g. data/4_operands_0_to_999_uniform/train_reverse.txt).
-- train_data_test_path — path to sampled train-eval file (optional).
-- val_data_path — path to validation .txt.
-- test_file_path — path to test .txt (e.g. data/.../test_reverse.txt).
+- out_dir — output directory for this run (e.g. 'results/4_operands_0_to_999_uniform/plain_out').
+- data_dir — data directory, where all the data files to be used live under this directory. (e.g. 'data/4_operands_0_to_999_uniform/').
+- train_data_name — name of the training data (e.g. 'train.txt').
+- train_data_test_name — name of the sampled train_eval file (optional, e.g. "train_eval.txt").
+- val_data_name — name of the validation data (e.g. 'val.txt').
+- test_file_name — name of the test data (e.g. 'test.txt').
 - mode — "compute_gold" or "read_gold_as_str". If your test files already include the gold answers, use "read_gold_as_str".
 
-Example snippet can be found at configuration_files/4_operands_addition_reversed.txt.
+Example snippet can be found at configuration_files/4_operands_addition_plain.txt.
 
 ---
 
-## 4 — Run training & evaluation
+### 2.3 Run the model
 
-Start training (example command can be found at startHere.ipynb):
+#### For a quick start: use this command
+#### only have to specify --task and --experiment_name (match the ones specified in the data generation step)
 
-```python
-python train.py 4_operands_addition_reversed.txt
+```bash
+python train.py --task addition --experiment_name 4_operands_0_to_999_uniform
+```
+
+#### For a finer control: use this command
+#### The .txt file is the configuration file, configured in Section 2.2
+
+```bash
+!python train.py 4_operands_addition_plain.txt
 ```
 
 To run evaluation/analysis after training:

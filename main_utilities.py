@@ -8,6 +8,8 @@ import math
 import os
 import copy
 import torch
+from pathlib import Path
+from typing import Tuple, List, Union
 
 def create_meta_file(vocabulary, input_data_str=None, tokenizer='char'):
     operators_str = string.punctuation
@@ -417,4 +419,42 @@ def get_error_metric(y, y_hat, metric_type='accuracy', eps=0, list_not_num=[], l
     return error, list_not_num, list_outlier_num
 
 
+def gather_test_files(test_file_path: Union[str, Path], main_test_name: str) -> Tuple[List[Path], str]:
+    """
+    Given test_file_path (file or directory), return a list of Path objects:
+      - If test_file_path points to a single .txt file, return [that_file].
+      - If it points to a directory, return every file directly under that directory.
+    Raises FileNotFoundError if path doesn't exist,
+    ValueError if a single-file path is provided but it's not a .txt file.
+    """
+    p = Path(test_file_path)
 
+    if not p.exists():
+        raise FileNotFoundError(f"Path not found: {p}")
+
+    if p.is_file():
+        if p.suffix.lower() != ".txt":
+            raise ValueError(f"Expected a .txt file but got: {p.name}")
+        return [p.resolve()], p.stem
+
+    if p.is_dir():
+        # list only files (not subdirectories), sorted for deterministic order
+        files = sorted([f.resolve() for f in p.iterdir() if f.is_file()])
+        return files, main_test_name
+
+    # fallback (e.g., special file types)
+    raise ValueError(f"Unsupported path type: {p}")
+
+# --- normalize relative paths in config to absoßlute paths (project root = cwd) ---
+def abs_if_rel(p):
+    """If p is a non-empty relative path string, return absolute path relative to cwd.
+    Otherwise return p unchanged (handles None, empty string, and absolute paths)."""
+    if p is None:
+        return p
+    p = str(p)
+    if p == "":
+        return p
+    if os.path.isabs(p):
+        return p
+    # treat current working directory as the project's main directory
+    return os.path.abspath(os.path.join(os.getcwd(), p))
