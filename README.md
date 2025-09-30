@@ -27,7 +27,7 @@ Important files & folders (high level):
 
 ---
 
-## 2 — Quickstart example (4-operand 0–999 addition, reverse format)
+## 2 — Quickstart example (4-operand 0–999 addition, plain format)
 
 Follow two simple steps to get the model start training.
 
