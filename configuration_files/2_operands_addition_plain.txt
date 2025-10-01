@@ -3,12 +3,11 @@ eval_interval = 100
 eval_iters = 1
 always_save_checkpoint = True
 
-
 wandb_log = True # override via command line if you like
 wandb_project = 'addition'
 
 # to edit: wandb run name
-wandb_run_name = '2_operands_0_to_999_uniform_gold_by_computing_plain'
+wandb_run_name = '2_operands_0_to_999_uniform_gold_by_reading_plain'
 
 # baby GPT model :)
 n_layer = 6
@@ -54,41 +53,29 @@ warmup_iters = 100
 # ===== Device ===== #
 device='cuda:0'
 
-# to edit: the output directory
-out_dir = '/content/drive/MyDrive/addition/results/2_operands_0_to_999_uniform/gold_by_computing_plain_out'
+# to edit: the output directory; Path is relative to the project's main directory. 
+# For example, the project's main directory might be "/content/drive/MyDrive/addition/"
+out_dir = 'results/2_operands_0_to_999_uniform/plain_out'
+
+# to edit: data directory; Path is relative to the project's main directory. 
+data_dir = 'data/2_operands_0_to_999_uniform/'
 
 # to edit: training data
-train_data_path = '/content/drive/MyDrive/addition/data/2_operands_0_to_999_uniform/train.txt'
+train_data_name = 'train.txt'
 
 # to edit: whether do evaluation on training data to see if the model is simply memorizing
 eval_addition_train = True
-train_data_test_path = "/content/drive/MyDrive/addition/data/2_operands_0_to_999_uniform/train_eval.txt"
+train_data_test_name = "train_eval.txt"
 
 # to edit: validation data
-val_data_path = '/content/drive/MyDrive/addition/data/2_operands_0_to_999_uniform/val.txt'
+val_data_name = 'val.txt'
 
-# to edit: test data; start is just the test file. It can be either without gold (thus gold by computing) or with gold (thus gold by reading)
+# to edit: test data; It can be either without gold (thus gold by computing) or with gold (thus gold by reading)
+# "test_file_name" can be either a single file, or the name of the directory that contains multiple test files 
+# "main_test_name" is the name, without extension, of the test file (in case there are multiple test files) that's to be displayed in wandb
 eval_addition = True
-test_file_path = '/content/drive/MyDrive/addition/data/2_operands_0_to_999_uniform/test_plain/test.txt'
+test_file_name = 'test.txt'
+main_test_name = "test"
 
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
 mode = "read_gold_as_str"
-
-# to edit: whether to do more frequenly evaluations in early stages
-more_early_eval1 = False
-early_eval_interval1 = 25
-early_eval_iters1 = 3000
-
-more_early_eval2 = False
-early_eval_interval2 = 5
-early_eval_iters2 = 750
-
-# to edit: whether do mutual information measurement between diffrent pairs of digits (include input-output and output-output)
-mi_measurement = False
-
-# (optional) data for additional statistical measurement
-stats_measurement_data_file_path = '/content/drive/MyDrive/addition/data/4_operands_0_to_999_output_wo_leading_digit/4_operand_addition_stats_measurement_data_reversed.txt'
-
-early_mi_measure_border = 200000
-early_mi_measure_interval = 5000
-final_mi_measure_interval = 5000

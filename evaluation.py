@@ -153,17 +153,9 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
 
     correct = 0
 
-    if analyze:
-        # analyze various metrics
-        error_dict = {'y': [], 'y_hat': [], 'accuracy_eps0': [], 'accuracy_eps5e-4': [],
-                      'accuracy_eps5e-3': [], 'mse': [], 'normalized_mse': [],
-                      'digit_wise_difference': [], 'incorrect_digit_count': []}
-        list_not_num = []
-        list_outlier_num = []
     op = operator
     correct_examples = []
     incorrect_examples = []
-    print(f"Max number of tokens {max_new_tokens}.")
     for batch_idx in tqdm(range(len(batch_list))):
         batch = batch_list[batch_idx]
         x_list = [input_tuple[0] for input_tuple in batch]
@@ -230,48 +222,13 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
                             print('outputs(x): ', outcome)
                             print(f'wrong  : {operands}={c_hat}')
                             print(f'correct: {operands}={result}')
-                    # Calculate metrics if analyzing
-                    if analyze:
-                        error_dict['y'].append(result)
-                        error_dict['y_hat'].append(c_hat)
-
-                        metric_types = ['mse', 'normalized_mse', 'digit_wise_difference', 'incorrect_digit_count']
-                        for metric_type in metric_types:
-                            error, list_not_num, list_outlier_num = get_error_metric(result, c_hat, metric_type, eps=config.get('eps', 0),
-                                                                                    list_not_num=list_not_num, list_outlier_num=list_outlier_num)
-                            error_dict[f'{metric_type}'].append(error)
-
-                        error, _, _ = get_error_metric(result, c_hat, 'accuracy', eps=0, list_not_num=list_not_num, list_outlier_num=list_outlier_num)
-                        error_dict[f'accuracy_eps0'].append(error * 100)
-                        error, _, _ = get_error_metric(result, c_hat, 'accuracy', eps=5e-4, list_not_num=list_not_num, list_outlier_num=list_outlier_num)
-                        error_dict[f'accuracy_eps5e-4'].append(error * 100)
-                        error, _, _ = get_error_metric(result, c_hat, 'accuracy', eps=5e-3, list_not_num=list_not_num, list_outlier_num=list_outlier_num)
-                        error_dict[f'accuracy_eps5e-3'].append(error * 100)
+                    
 
     accuracy = correct / total * 100
-    print(f"accuracy of {total} examples: {correct}/{total} ({accuracy}%)")
-
-    accuracy_dictionary = {}
-    if analyze:
-        error_df = pd.DataFrame(error_dict)
-        result_dir = config.get('result_dir')
-        if result_dir is None:
-            result_dir = get_results_dir(config)
-        error_df.to_csv(os.path.join(result_dir, 'error_df.csv'), index=False)
-
-        error_mean_dict = {
-            metric_type: np.nanmean(error_dict[f'{metric_type}'])
-            for metric_type in ['accuracy_eps0', 'accuracy_eps5e-4', 'accuracy_eps5e-3',
-                               'mse', 'normalized_mse', 'digit_wise_difference', 'incorrect_digit_count']
-        }
-        error_mean_dict['num_not_num'] = len(list_not_num) / len(metric_types)
-        error_mean_dict['num_outlier_num'] = len(list_outlier_num) / len(metric_types)
-        error_mean_dict['median_mse'] = error_df.mse.median()
-        error_mean_dict['median_normalized_mse'] = error_df.normalized_mse.median()
-        accuracy_dictionary.update(error_mean_dict)
+    
 
     model.train()
-    return accuracy, accuracy_dictionary, correct_examples, incorrect_examples
+    return accuracy, correct_examples, incorrect_examples
 
 # Keep the original function for backward compatibility, but make it use the new functions
 def evaluate_addition_batch(config, model, ctx, encode, decode, verbose=False, num_digit=3, zero_pad=False, 
@@ -325,7 +282,7 @@ def evaluate_multiple_files(config, model, ctx, encode, decode, test_files, iter
         config['start'] = f"FILE:{test_file}"
         
         # Run evaluation
-        accuracy, _, correct, incorrect = evaluate_addition_batch(
+        accuracy, correct, incorrect = evaluate_addition_batch(
             config, model, ctx, encode=encode, decode=decode,
             verbose=verbose, num_digit=num_digit, zero_pad=zero_pad,
             data_type=data_type, operator=operator,

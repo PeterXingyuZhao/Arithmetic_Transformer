@@ -88,7 +88,7 @@ beta2 = 0.95
 grad_clip = 1.0 # clip gradients at this value, or disable if == 0.0
 # learning rate decay settings
 decay_lr = True # whether to decay the learning rate
-warmup_iters = 2000 # how many steps to warm up for
+warmup_iters = 100 # how many steps to warm up for
 lr_decay_iters = 600000 # should be ~= max_iters per Chinchilla
 min_lr = None # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
 
@@ -495,6 +495,15 @@ def get_lr_for_iter(iter_num):
 if wandb_log and master_process:
     import wandb
     wandb.init(project=wandb_project, name=wandb_run_name, config=config, dir = out_dir)
+    wandb.define_metric("lr", step_metric="iter")
+    wandb.define_metric("iter",   step_metric="iter")
+    wandb.define_metric("test/accuracy", step_metric="iter")
+    wandb.define_metric("train/loss", step_metric="iter")
+    wandb.define_metric("train/accuracy", step_metric="iter")
+    wandb.define_metric("val/loss",   step_metric="iter")
+    
+    
+
 
 
 train_dataset = AdditionDataset(train_data_path, meta)
@@ -700,7 +709,6 @@ while iter_num < max_iters:
             "iter": iter_num,
             "train/loss": losses['train'],
             "val/loss": losses['val'],
-            "lr": lr,
         }
 
         if losses['val'] < best_val_loss:
@@ -709,7 +717,7 @@ while iter_num < max_iters:
         # Regular test evaluation
         test_accuracy = None
         if eval_addition:
-            test_names, accuracy_multiple_file, _, _ = evaluate_multiple_files(
+            test_names, accuracy_multiple_file, correct_examples_multiple_file, incorrect_examples_multiple_file = evaluate_multiple_files(
                 config, model, ctx,
                 encode=lambda x: encode_addition(x, meta),
                 decode=lambda x: decode_addition(x, meta),
@@ -727,17 +735,18 @@ while iter_num < max_iters:
             )
 
             test_accuracy = accuracy_multiple_file.get(main_test_name, None)
-
+            total_num = len(correct_examples_multiple_file.get(main_test_name)) + len(incorrect_examples_multiple_file.get(main_test_name))
+            correct_num = len(correct_examples_multiple_file.get(main_test_name))
             # Log results
             print("\nTest Results:")
-            print(f"test.txt: {test_accuracy:.2f}%")
+            print(f"{main_test_name}.txt, {total_num} examples: {correct_num}/{total_num}  ({test_accuracy:.2f}%)")
 
             print()
             
             # Add test accuracy to wandb_dict
             wandb_dict["test/accuracy"] = test_accuracy
             
-            if test_accuracy > best_accuracy and iter_num % 5 * eval_interval == 0:
+            if test_accuracy > best_accuracy and iter_num % 5 == 0:
                 best_accuracy = test_accuracy
                 checkpoint = {
                     'model': raw_model.state_dict(),
@@ -755,7 +764,7 @@ while iter_num < max_iters:
         train_accuracy = None
         if eval_addition_train:
             config['start'] = f"FILE:{train_data_test_path}"
-            train_accuracy, _ , correct, incorrect = evaluate_addition_batch(
+            train_accuracy, correct, incorrect = evaluate_addition_batch(
                 config, model, ctx, 
                 encode=lambda x: encode_addition(x, meta),
                 decode=lambda x: decode_addition(x, meta), 
@@ -784,7 +793,8 @@ while iter_num < max_iters:
         
         # Single wandb log per iteration with all metrics
         if wandb_log:
-            wandb.log(wandb_dict)
+            wandb.log(wandb_dict, step=iter_num)
+
     
     iter_num += 1
 
@@ -812,7 +822,7 @@ for test_file in test_files:
 
 if eval_addition:
     config['start'] = f"FILE:{standard_test_file_path}"
-    test_accuracy, _ , correct, incorrect = evaluate_addition_batch(
+    test_accuracy, correct, incorrect = evaluate_addition_batch(
         config, model, ctx, 
         encode=lambda x: encode_addition(x, meta),
         decode=lambda x: decode_addition(x, meta), 
@@ -848,7 +858,7 @@ if eval_addition:
 
 if eval_addition_train:
     config['start'] = f"FILE:{train_data_test_path}"
-    train_accuracy, _ , correct, incorrect = evaluate_addition_batch(
+    train_accuracy, correct, incorrect = evaluate_addition_batch(
         config, model, ctx, 
         encode=lambda x: encode_addition(x, meta),
         decode=lambda x: decode_addition(x, meta), 
@@ -862,11 +872,11 @@ if eval_addition_train:
     )
     
     
-test_names, accuracy_multiple_file, _, _ = evaluate_multiple_files(
+test_names, accuracy_multiple_file, correct_examples_multiple_file, incorrect_examples_multiple_file = evaluate_multiple_files(
     config, model, ctx,
     encode=lambda x: encode_addition(x, meta),
     decode=lambda x: decode_addition(x, meta),
-    test_file=test_file_path,
+    test_files=test_files,
     iter_num='final',
     result_dir=result_dir,
     verbose=False,
@@ -879,18 +889,22 @@ test_names, accuracy_multiple_file, _, _ = evaluate_multiple_files(
     mode=mode
 )
 
+test_accuracy = accuracy_multiple_file.get(main_test_name, None)
+total_num = len(correct_examples_multiple_file.get(main_test_name)) + len(incorrect_examples_multiple_file.get(main_test_name))
+correct_num = len(correct_examples_multiple_file.get(main_test_name))
 print("\nFinal Test Results:")
-print(f"test.txt: {accuracy_multiple_file[main_test_name]:.2f}%")
+print(f"{main_test_name}.txt, {total_num} examples: {correct_num}/{total_num}  ({test_accuracy:.2f}%)")
 print()
+
 
 
 # Final wandb logging
 if wandb_log:
     final_dict = {
-        "iter": iter_num,
         "train/loss": losses['train'],
         "val/loss": losses['val'],
         "lr": lr,
+        "iter": iter_num,
         "test/accuracy": test_accuracy if eval_addition else None,
         "train/accuracy": train_accuracy if eval_addition_train else None,
     }
