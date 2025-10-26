@@ -148,7 +148,7 @@ class GPT(nn.Module):
       n_params -= self.transformer.wte.weight.numel()
     return n_params
 
-  def forward(self, idx, targets=None):
+  def forward(self, idx, targets=None, get_hidden_embedding=None):
     device = idx.device
     b, t = idx.size()
     assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
@@ -159,6 +159,11 @@ class GPT(nn.Module):
     x = self.transformer.drop(tok_emd + pos_emd)
     for block in self.transformer.h:
       x = block(x)
+
+    # for i, block in enumerate(self.transformer.h):
+    #   x = block(x)
+    #   if get_hidden_embedding is not None and i == get_hidden_embedding:
+    #      h_l = x
     x = self.transformer.ln_f(x)
 
     if targets is not None:

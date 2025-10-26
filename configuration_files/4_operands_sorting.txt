@@ -1,5 +1,5 @@
 # to edit: do an evaluation every {eval_interval} iterations
-eval_interval = 1000
+eval_interval = 50
 eval_iters = 1
 always_save_checkpoint = True
 
@@ -43,8 +43,8 @@ zero_pad = False
 learning_rate = 1e-3
 
 # to edit: the number of training iterations
-max_iters = 100000
-lr_decay_iters = 100000 # make equal to max_iters usually (300000)
+max_iters = 5000
+lr_decay_iters = 5000 # make equal to max_iters usually (300000)
 
 beta1 = 0.9
 beta2 = 0.98
@@ -55,7 +55,7 @@ device='cuda:0'
 
 # to edit: the output directory; Path is relative to the project's main directory. 
 # For example, the project's main directory might be "/content/drive/MyDrive/addition/"
-out_dir = 'results/4_operands_sorting_balanced_digit/plain_out'
+out_dir = 'results/4_operands_sorting_balanced_digit/digitwise_test_out'
 
 # to edit: data directory; Path is relative to the project's main directory. 
 data_dir = 'data/4_operands_sorting_balanced_digit/'
@@ -74,7 +74,7 @@ val_data_name = 'val.txt'
 # "test_file_name" can be either a single file, or the name of the directory that contains multiple test files 
 # If it's a directory, "main_test_name" is the name of the test file (without extension) that's to be displayed in wandb
 eval_addition = True
-test_file_name = 'test.txt'
+test_file_name = 'test'
 main_test_name = "test"
 
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data

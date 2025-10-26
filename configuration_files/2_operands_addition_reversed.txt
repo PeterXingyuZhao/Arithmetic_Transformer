@@ -1,5 +1,5 @@
 # to edit: do an evaluation every {eval_interval} iterations
-eval_interval = 100
+eval_interval = 500
 eval_iters = 1
 always_save_checkpoint = True
 

@@ -85,7 +85,7 @@ def get_abc_new(abc: str, zero_pad=False, data_format="plain", binary=False, mod
 
 _precomputed_batches = {}
 def prepare_addition_batches(config, encode, num_digit=3, zero_pad=False, binary=False,  data_type='binary', 
-                             operator='+', data_format='plain', add_space=False, simple=False, mode: str = "compute_gold"):
+                             operator='+', data_format='plain', add_space=False, simple=False, mode: str = "compute_gold", batch_method: str = "per_example"):
     device = config['device']
     test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
     start = config['start'] if 'start' in config.keys() else "FILE:prompt/prompt_addition_pad_test_0.01.txt"
@@ -105,7 +105,10 @@ def prepare_addition_batches(config, encode, num_digit=3, zero_pad=False, binary
     for line in lines:
         # split off gold answer
         # e.g. line = "123+456=579"
-        prompt_str = line.split('=')[0] + '='      # "123+456="
+        if batch_method == 'per_example':
+            prompt_str = line.split('=')[0] + '='  # keep the '=' at the end
+        else:
+            prompt_str = '\n' + line.split('=')[0] + '='      # "123+456="
         prompt_ids = encode(prompt_str)
         x = torch.tensor(prompt_ids, dtype=torch.long, device=device)[None, ...]
         prompt_length = x.size(1)
@@ -232,8 +235,8 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
 
 # Keep the original function for backward compatibility, but make it use the new functions
 def evaluate_addition_batch(config, model, ctx, encode, decode, verbose=False, num_digit=3, zero_pad=False, 
-                          data_type='binary', operator='+', 
-                          data_format='plain', add_space=False, verbose_correct=False, analyze=False, mode: str = "compute_gold"):
+                          data_type='binary', operator='+', data_format='plain', add_space=False, verbose_correct=False,
+                          analyze=False, mode: str = "compute_gold", batch_method: str = "per_example"):
     config_hash = hash(frozenset({k: str(v) for k, v in config.items() if k != 'device'}.items()))
     batch_key = f"{config_hash}_{data_type}_{operator}_{num_digit}_{zero_pad}_{data_format}_{add_space}"
     
@@ -244,7 +247,7 @@ def evaluate_addition_batch(config, model, ctx, encode, decode, verbose=False, n
         print("Creating new batches")
         batch_list, total = prepare_addition_batches(
             config, encode, num_digit=num_digit, zero_pad=zero_pad,
-            data_type=data_type, operator=operator, data_format=data_format, add_space=add_space, mode=mode
+            data_type=data_type, operator=operator, data_format=data_format, add_space=add_space, mode=mode, batch_method=batch_method
         )
 
     # Evaluate using the batches
@@ -255,8 +258,8 @@ def evaluate_addition_batch(config, model, ctx, encode, decode, verbose=False, n
     )
 
 def evaluate_multiple_files(config, model, ctx, encode, decode, test_files, iter_num, result_dir,
-                          verbose=False, num_digit=3, zero_pad=False,
-                          data_type='binary', operator='+', data_format='plain', add_space=False, analyze=False, mode: str = "compute_gold"):
+                          verbose=False, num_digit=3, zero_pad=False, data_type='binary', operator='+', 
+                          data_format='plain', add_space=False, analyze=False, mode: str = "compute_gold", batch_method: str = "per_example"):
     """
     Evaluate model on multiple test files and store results.
     Args:
@@ -286,7 +289,7 @@ def evaluate_multiple_files(config, model, ctx, encode, decode, test_files, iter
             config, model, ctx, encode=encode, decode=decode,
             verbose=verbose, num_digit=num_digit, zero_pad=zero_pad,
             data_type=data_type, operator=operator,
-            data_format=data_format, analyze=analyze, mode=mode
+            data_format=data_format, analyze=analyze, mode=mode, batch_method=batch_method
         )
 
         accuracy_multiple_files[test_name] = accuracy

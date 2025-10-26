@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""
+
+Example usage:
+  python addition_gen.py --train_size 0 --val_size 0 --test_size 10000 --num_operands 5 --output_dir ./
+
+"""
 import argparse
 import random
 from pathlib import Path

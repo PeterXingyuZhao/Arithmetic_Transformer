@@ -25,6 +25,8 @@ from statistical_measurements import *
 
 import re
 from pathlib import Path as _Path
+import argparse as _argparse
+import result_analysis
 # I/O
 
 out_dir = '/drive/MyDrive/addition/plain_no_pad/out'
@@ -137,14 +139,17 @@ drop_leading_digit = False
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str, type(None)))]
 
 # ---- begin: accept either a config file positional OR --task/--experiment_name flags ----
-import argparse as _argparse
 
 # parse only the two special options here, leave the rest for configurator.py
 _cfg_parser = _argparse.ArgumentParser(add_help=False)
 _cfg_parser.add_argument('config_path', nargs='?', help='Optional path to a config file (positional).')
 _cfg_parser.add_argument('--task', choices=['addition', 'multiplication', 'sorting'], help='If provided, load a default config for this task.')
 _cfg_parser.add_argument('--experiment_name', help='If provided with --task, override experiment/data directories with this experiment name.')
+# NEW: select batch preparation method: 'per_example' (default) or 'slicing'
+_cfg_parser.add_argument('--batch', choices=['per_example','slicing'], default='per_example',
+                        help="Batch preparation method: per_example uses Dataset+DataLoader; slicing uses random-token slices.")
 _known_args, _remaining_argv = _arg_parser = _cfg_parser.parse_known_args()
+
 
 cfg_file_to_load = None
 if _known_args.config_path:
@@ -216,32 +221,11 @@ for varname in (
     if varname in globals():
         globals()[varname] = abs_if_rel(globals()[varname])
 
-
-def create_meta_for_addition(data):
-    """Create metadata for addition data."""
-    # Define the vocabulary for addition problems
-    # This includes digits, operators, equals sign, and newline
-    chars = sorted(list(set(data)))
-
-    # ensure special eos/pad tokens exist
-    if '$' not in chars:
-        chars.append('$')
-    if '<pad>' not in chars:
-        chars.append('<pad>')
-    chars = sorted(chars)
-
-    vocab_size = len(chars)
-    # Create encoder and decoder dictionaries
-    stoi = {ch: i for i, ch in enumerate(chars)}
-    itos = {i: ch for i, ch in enumerate(chars)}
-    
-    meta = {
-        'vocab_size': vocab_size,
-        'vocab': chars,
-        'stoi': stoi,
-        'itos': itos
-    }
-    return meta
+mi_measure_iters = set(
+    list(range(0,  early_mi_measure_border, early_mi_measure_interval)) +    # every 20 steps before 200
+    # list(range(100000, 100000, 20)) +   # every 50 steps from 200 up to 1500
+    list(range(early_mi_measure_border, max_iters+1, final_mi_measure_interval))  # every 100 steps thereafter
+)
 
 def encode_addition(text, meta):
     """Encode text to tensor using the metadata."""
@@ -261,39 +245,19 @@ def pad_sequence(x: torch.Tensor, length: int, pad_value: int):
     else:
         return x
 
-class AdditionDataset(Dataset):
-    def __init__(self, file_path, meta):
-        self.meta = meta
-        # Read the text file
-        with open(file_path, 'r') as f:
-            raw_lines = [line.strip() for line in f.readlines() if line.strip()]
-        # Remove any empty lines and strip whitespace
-        self.lines = [line if line.endswith('$') else line + '$' for line in raw_lines]
-        self.block_size = block_size  # from your config
-        # pad/eos ids from meta
-        self.pad_id = self.meta['stoi'].get('<pad>')
-        if self.pad_id is None:
-            raise ValueError("pad token '<pad>' not found in meta['stoi']")
-        self.eos_id = self.meta['stoi'].get('$')
-        if self.eos_id is None:
-            raise ValueError("eos token '$' not found in meta['stoi']")
-        
-    def __len__(self):
-        return len(self.lines)
-    
-    def __getitem__(self, idx):
-        line_with_trailing_eos = self.lines[idx]
-        # Convert the line to tensor using our encoder
-        raw = encode_addition(line_with_trailing_eos, self.meta)  # raw ends with eos_id
-        x = pad_sequence(raw[:-1], block_size, pad_value=self.pad_id)
-        y = pad_sequence(raw[1:],  block_size, pad_value=self.pad_id)  # -100 is ignore_index
-        return x, y
+def get_batch(split):
+    data = train_data if split == 'train' else val_data
+    ix = torch.randint(len(data) - block_size, (batch_size,))
 
-mi_measure_iters = set(
-    list(range(0,  early_mi_measure_border, early_mi_measure_interval)) +    # every 20 steps before 200
-    # list(range(100000, 100000, 20)) +   # every 50 steps from 200 up to 1500
-    list(range(early_mi_measure_border, max_iters+1, final_mi_measure_interval))  # every 100 steps thereafter
-)
+    x = torch.stack([torch.from_numpy((data[i:i+block_size]).astype(np.int64)) for i in ix])
+    y = torch.stack([torch.from_numpy((data[i+1:i+1+block_size]).astype(np.int64)) for i in ix])
+
+    if device_type == 'cuda':
+        # pin arrays x,y, which allows us to move them to GPU asynchronously (non_blocking=True)
+        x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
+    else:
+        x, y = x.to(device), y.to(device)
+    return x, y
 
 # function to set seed for all random number generators
 def set_seed(seed):
@@ -328,15 +292,106 @@ device_type = 'cuda' if 'cuda' in device else 'cpu' # for later use in torch.aut
 ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[dtype]
 ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
 
-# Read the data files
-with open(train_data_path, 'r') as f:
-    train_data = f.read()
-with open(val_data_path, 'r') as f:
-    val_data = f.read()
+
+
+train_data_str = concat_strip_dollar(train_data_path)
+val_data_str = concat_strip_dollar(val_data_path)
 
 # Create metadata from the combined data
-all_data = train_data + val_data
-meta = create_meta_for_addition(train_data)
+meta, data_encoder, data_decoder = create_meta_for_addition(train_data_str)
+
+# Decide batch method from CLI
+batch_method = getattr(_known_args, 'batch', 'per_example')
+print(f"Using batch preparation method: {batch_method}")
+
+def get_infinite_dataloader(dataloader):
+    while True:
+        for batch in dataloader:
+            yield batch
+
+class AdditionDataset(Dataset):
+    def __init__(self, file_path, meta):
+        self.meta = meta
+        # Read the text file
+        with open(file_path, 'r') as f:
+            raw_lines = [line.strip() for line in f.readlines() if line.strip()]
+        # Remove any empty lines and strip whitespace
+        self.lines = [line if line.endswith('$') else line + '$' for line in raw_lines]
+        self.block_size = block_size  # from your config
+        # pad/eos ids from meta
+        self.pad_id = self.meta['stoi'].get('<pad>')
+        if self.pad_id is None:
+            raise ValueError("pad token '<pad>' not found in meta['stoi']")
+        self.eos_id = self.meta['stoi'].get('$')
+        if self.eos_id is None:
+            raise ValueError("eos token '$' not found in meta['stoi']")
+        
+    def __len__(self):
+        return len(self.lines)
+    
+    def __getitem__(self, idx):
+        line_with_trailing_eos = self.lines[idx]
+        # Convert the line to tensor using our encoder
+        raw = encode_addition(line_with_trailing_eos, self.meta)  # raw ends with eos_id
+        x = pad_sequence(raw[:-1], block_size, pad_value=self.pad_id)
+        y = pad_sequence(raw[1:],  block_size, pad_value=self.pad_id)  # -100 is ignore_index
+        return x, y
+
+if batch_method == 'per_example':
+    # per-example: use AdditionDataset and DataLoader
+    train_dataset = AdditionDataset(train_data_path, meta)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        pin_memory=(device_type=='cuda')
+    )
+    val_dataset = AdditionDataset(val_data_path, meta)
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        pin_memory=(device_type=='cuda')
+    )
+    train_loader_iter = get_infinite_dataloader(train_loader)
+
+    # Ensure estimate_loss uses dataloaders below (we'll check it later)
+
+else:
+    # slicing: convert full text into 1D token tensor(s)
+    # If train_data_str/val_data_str not created, load files (safe fallback)
+    if 'train_data_str' not in globals():
+        train_data_str = concat_strip_dollar(train_data_path)  # or open/read
+    if 'val_data_str' not in globals():
+        val_data_str = concat_strip_dollar(val_data_path)
+
+    train_data = data_encoder(train_data_str)  # 1D tensor / numpy -> convert below if needed
+    val_data = data_encoder(val_data_str)
+
+    # Ensure 1D torch tensors
+    if isinstance(train_data, np.ndarray):
+        train_data = torch.from_numpy(train_data)
+    if isinstance(val_data, np.ndarray):
+        val_data = torch.from_numpy(val_data)
+
+    # slicing get_batch used in your second file
+    def get_batch(split='train'):
+        data = train_data if split == 'train' else val_data
+        assert data.dim() == 1, "slicing expects 1D sequence of token ids"
+        max_start = data.size(0) - block_size - 1
+        if max_start <= 0:
+            raise ValueError("Dataset shorter than block_size")
+        ix = torch.randint(0, max_start, (batch_size,), dtype=torch.long)
+        x = torch.stack([data[i:i+block_size].long() for i in ix], dim=0)
+        y = torch.stack([data[i+1:i+1+block_size].long() for i in ix], dim=0)
+
+        if device_type == 'cuda':
+            x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
+        else:
+            x, y = x.to(device), y.to(device)
+        return x, y
+
+
 
 # meta already created above
 pad_id = meta['stoi']['<pad>']
@@ -456,26 +511,30 @@ def estimate_loss():
     model.eval()
     for split in ['train', 'val']:
         losses = torch.zeros(eval_iters)
-        # Get an iterator from the DataLoader
-        dataloader = train_loader if split == 'train' else val_loader
-        dataloader_iter = iter(dataloader)
-
-        for k in range(eval_iters):
-            try:
-                X, Y = next(dataloader_iter)
-
-            except StopIteration:
-                # If we run out of batches, create a new iterator
-                dataloader_iter = iter(dataloader)
-                X, Y = next(dataloader_iter)
-
-            with ctx:
-                X, Y = X.to(device), Y.to(device)
-                logits, loss = model(X, Y)
-            losses[k] = loss.item()
+        if batch_method == 'per_example':
+            dataloader = train_loader if split == 'train' else val_loader
+            dataloader_iter = iter(dataloader)
+            for k in range(eval_iters):
+                try:
+                    X, Y = next(dataloader_iter)
+                except StopIteration:
+                    dataloader_iter = iter(dataloader)
+                    X, Y = next(dataloader_iter)
+                with ctx:
+                    X, Y = X.to(device), Y.to(device)
+                    logits, loss = model(X, Y)
+                losses[k] = loss.item()
+        else:
+            # slicing mode uses get_batch
+            for k in range(eval_iters):
+                X, Y = get_batch(split if split == 'train' else 'val')
+                with ctx:
+                    logits, loss = model(X, Y)
+                losses[k] = loss.item()
         out[split] = losses.mean()
     model.train()
     return out
+
 
 
 def get_lr_for_iter(iter_num):
@@ -502,25 +561,6 @@ if wandb_log and master_process:
     wandb.define_metric("train/accuracy", step_metric="iter")
     wandb.define_metric("val/loss",   step_metric="iter")
     
-    
-
-
-
-train_dataset = AdditionDataset(train_data_path, meta)
-train_loader = DataLoader(
-    train_dataset,
-    batch_size=batch_size,
-    shuffle=True,
-    pin_memory=(device_type=='cuda')
-)
-
-val_dataset = AdditionDataset(val_data_path, meta)
-val_loader = DataLoader(
-    val_dataset,
-    batch_size=batch_size,
-    shuffle=True,
-    pin_memory=(device_type=='cuda')
-)
 
 # encode, decode = get_encode_decode(meta_path, tokenizer=tokenizer)
 
@@ -590,7 +630,7 @@ def get_infinite_dataloader(dataloader):
         for batch in dataloader:
             yield batch
 
-train_loader_iter = get_infinite_dataloader(train_loader)
+
 if 'max_new_tokens' in config.keys():
     print(f"max_new_tokens: {config['max_new_tokens']}")
 else:
@@ -607,8 +647,11 @@ while iter_num < max_iters:
             param_group['lr'] = lr
     
     # Get next batch
-    X, Y = next(train_loader_iter)
-    X, Y = X.to(device), Y.to(device)
+    if batch_method == 'per_example':
+        X, Y = next(train_loader_iter)
+        X, Y = X.to(device), Y.to(device)
+    else:
+        X, Y = get_batch('train')  # already moved to device in get_batch
     
     # Forward pass
     with ctx:
@@ -731,7 +774,8 @@ while iter_num < max_iters:
                 operator=operator,
                 data_format=data_format,
                 analyze=True,
-                mode=mode
+                mode=mode, 
+                batch_method=batch_method
             )
 
             test_accuracy = accuracy_multiple_file.get(main_test_name, None)
@@ -774,7 +818,8 @@ while iter_num < max_iters:
                 data_type=data_type, 
                 operator=operator, 
                 data_format=data_format,
-                mode=mode
+                mode=mode,
+                batch_method=batch_method
             )
             
             # Add train accuracy to wandb_dict
@@ -833,7 +878,8 @@ if eval_addition:
         operator=operator, 
         data_format=data_format, 
         analyze=True,
-        mode=mode
+        mode=mode,
+        batch_method=batch_method
     )
     import csv
     # Save correct examples
@@ -868,7 +914,8 @@ if eval_addition_train:
         data_type=data_type, 
         operator=operator, 
         data_format=data_format,
-        mode=mode
+        mode=mode,
+        batch_method=batch_method
     )
     
     
@@ -886,7 +933,8 @@ test_names, accuracy_multiple_file, correct_examples_multiple_file, incorrect_ex
     operator=operator,
     data_format=data_format,
     analyze=True,
-    mode=mode
+    mode=mode,
+    batch_method=batch_method
 )
 
 test_accuracy = accuracy_multiple_file.get(main_test_name, None)
@@ -914,3 +962,24 @@ if wandb_log:
 # Save final DataFrame
 result_df = pd.DataFrame(result_dict)
 result_df.to_csv(os.path.join(result_dir, 'training_metrics.csv'), index=False)
+
+csv_path = os.path.join(result_dir, f"{main_test_name}_results.csv")
+# or whatever path your code wrote (adjust)
+if os.path.exists(csv_path):
+    if operator == '+' or operator == '-' or operator == '*':
+        # save a figure into result_dir
+        fig_path = os.path.join(result_dir, "digitwise_errors.png")
+        print("Running result analysis on", csv_path)
+        df, counts_by_iter = result_analysis.analyze_csv(
+            csv_path,
+            step_size=5,
+            offset=0,
+            max_steps=800000,
+            actual_col="actual",
+            save_fig=True,
+            fig_path=fig_path,
+            save_counts_csv=True
+        )
+        print("Saved digit error plot to", fig_path)
+else:
+    print("Result CSV not found at:", csv_path)

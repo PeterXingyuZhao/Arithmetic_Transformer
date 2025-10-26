@@ -255,30 +255,6 @@ def get_encode_decode(meta_path=None, tokenizer='char'):
 
     return encode, decode
 
-def get_batch(split):
-    data = train_data if split == 'train' else val_data
-    if train_both:
-        data2 = train_data2 if split == 'train' else val_data2
-        batch_size2 = int(batch_size*data_ratio)
-        ix = torch.randint(len(data) - block_size, (batch_size-batch_size2,))
-        ix2 = torch.randint(len(data2) - block_size, (batch_size2,))
-    else:
-        ix = torch.randint(len(data) - block_size, (batch_size,))
-
-    x = torch.stack([torch.from_numpy((data[i:i+block_size]).astype(np.int64)) for i in ix])
-    y = torch.stack([torch.from_numpy((data[i+1:i+1+block_size]).astype(np.int64)) for i in ix])
-    if train_both:
-        x2 = torch.stack([torch.from_numpy((data2[i:i+block_size]).astype(np.int64)) for i in ix2])
-        y2 = torch.stack([torch.from_numpy((data2[i+1:i+1+block_size]).astype(np.int64)) for i in ix2])
-        x = torch.cat([x,x2])
-        y = torch.cat([y,y2])
-
-    if device_type == 'cuda':
-        # pin arrays x,y, which allows us to move them to GPU asynchronously (non_blocking=True)
-        x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
-    else:
-        x, y = x.to(device), y.to(device)
-    return x, y
 
 def get_results_dir(config):
     results_dir = config['out_dir']+'/'
@@ -386,3 +362,56 @@ def abs_if_rel(p):
         return p
     # treat current working directory as the project's main directory
     return os.path.abspath(os.path.join(os.getcwd(), p))
+
+def concat_strip_dollar(path: Union[str, Path]) -> str:
+    """
+    Read a text file and return a single string made by concatenating each line.
+    If a line ends with '$', that trailing '$' is removed. Each original line
+    in the result ends with a newline character '\\n'.
+    """
+    parts = []
+    with open(path, 'r', encoding='utf-8') as f:
+        for line in f:
+            # remove only newline characters, keep other trailing whitespace
+            s = line.rstrip('\r\n')
+            # if the last character (before newline) is '$', drop it
+            if s.endswith('$'):
+                s = s[:-1]
+            s = "$" + s + "$"
+            parts.append(s)
+    return '\n'.join(parts) + ('\n' if parts else '')
+
+def create_meta_for_addition(data):
+    """Create metadata for addition data."""
+    # Define the vocabulary for addition problems
+    # This includes digits, operators, equals sign, and newline
+    chars = sorted(list(set(data)))
+
+    # ensure special eos/pad tokens exist
+    if '$' not in chars:
+        chars.append('$')
+    if '<pad>' not in chars:
+        chars.append('<pad>')
+    chars = sorted(chars)
+
+    vocab_size = len(chars)
+    # Create encoder and decoder dictionaries
+    stoi = {ch: i for i, ch in enumerate(chars)}
+    itos = {i: ch for i, ch in enumerate(chars)}
+
+    def data_encoder(s):
+            data_ids = [stoi[c] for c in s] # encoder: take a string, output a list of integers
+            # convert to np array for efficiency
+            data_ids = np.array(data_ids, dtype=np.uint16)
+            return data_ids
+    def data_decoder(l):
+            return ''.join([itos[i] for i in l]) # decoder: take a list of integers, output a string
+
+    
+    meta = {
+        'vocab_size': vocab_size,
+        'vocab': chars,
+        'stoi': stoi,
+        'itos': itos
+    }
+    return meta, data_encoder, data_decoder
