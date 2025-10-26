@@ -42,19 +42,19 @@ TASK_MAP = {
     "addition": {
         "file": os.path.join("data_generation_script", "individual_task_scripts", "addition", "addition_gen.py"),
         "accepts_num_operands": True,
-        "generate_reverse": True,  
+        "generate_reverse": True,
     },
     "multiplication": {
         "file": os.path.join("data_generation_script", "individual_task_scripts", "multiplication", "multiplication_gen.py"),
-        # multiplication_gen.py does NOT accept --num_operands in your setup:
-        "accepts_num_operands": False,
-        "generate_reverse": True, 
+        # multiplication_gen.py now accepts --num_operands
+        "accepts_num_operands": True,
+        "generate_reverse": True,
     },
     "sorting": {
         "file": os.path.join("data_generation_script", "individual_task_scripts", "sorting", "sorting_gen.py"),
         # set True/False depending on your sorting_gen implementation
         "accepts_num_operands": False,
-        "generate_reverse": False, 
+        "generate_reverse": False,
     },
 }
 
@@ -135,6 +135,25 @@ def main():
 
     args = parser.parse_args()
 
+    # Validate num_operands bounds: generators accept up to 6 operands for digit-based tasks.
+    if args.num_operands is None:
+        num_operands = DEFAULT_NUM_OPERANDS
+    else:
+        num_operands = args.num_operands
+
+    if num_operands < 1:
+        print("Error: --num_operands must be >= 1.", file=sys.stderr)
+        sys.exit(2)
+
+    if num_operands > 6:
+        # Send message to user and exit with non-zero status.
+        print(
+            f"Error: --num_operands must be <= 6 (you provided {num_operands}). "
+            "Please choose a value in the range 1..6.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
     task = args.task
     experiment_name = args.experiment_name
 
@@ -163,11 +182,10 @@ def main():
     gen_cmd = [
         sys.executable,
         file_path,
-        # only include --num_operands if the generator accepts it
     ]
 
     if entry.get("accepts_num_operands", False):
-        gen_cmd += ["--num_operands", str(args.num_operands)]
+        gen_cmd += ["--num_operands", str(num_operands)]
 
     # always pass the output dir and sizes
     gen_cmd += [
@@ -201,16 +219,19 @@ def main():
             print(f"Expected train file not found: {input_train}", file=sys.stderr)
             sys.exit(5)
 
+        # argparse turns '--sample-size' into attribute 'sample_size'
+        sample_size_arg = getattr(args, "sample_size", DEFAULT_SAMPLE_SIZE)
+
         sample_cmd = [
             sys.executable,
             sample_script,
             "--input", input_train,
             "--output", output_train_eval,
-            "--sample-size", str(args.__dict__["sample-size"]) if "sample-size" in args.__dict__ else str(args.sample_size),
+            "--sample-size", str(sample_size_arg),
         ]
 
         try:
-            print(f"Sampling {args.sample_size} lines to create train_eval at '{output_train_eval}'")
+            print(f"Sampling {sample_size_arg} lines to create train_eval at '{output_train_eval}'")
             run_subprocess(sample_cmd)
         except RuntimeError as e:
             print(f"Sampling failed: {e}", file=sys.stderr)

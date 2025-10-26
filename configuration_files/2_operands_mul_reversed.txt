@@ -55,10 +55,10 @@ device='cuda:0'
 
 # to edit: the output directory; Path is relative to the project's main directory. 
 # For example, the project's main directory might be "/content/drive/MyDrive/addition/"
-out_dir = 'results/0_to_999999_times_1_digit_test/reverse_out'
+out_dir = 'results/0_to_999999_times_1_digit/reverse_out'
 
 # to edit: data directory; Path is relative to the project's main directory. 
-data_dir = 'data/0_to_999999_times_1_digit_test/'
+data_dir = 'data/0_to_999999_times_1_digit/'
 
 # to edit: training data
 train_data_name = 'train_reverse.txt'
@@ -75,7 +75,7 @@ val_data_name = 'val_reverse.txt'
 # If it's a directory, "main_test_name" is the name of the test file (without extension) that's to be displayed in wandb
 eval_addition = True
 test_file_name = 'test_reverse.txt'
-main_test_name = "test"
+main_test_name = "test_reverse"
 
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
 mode = "read_gold_as_str"

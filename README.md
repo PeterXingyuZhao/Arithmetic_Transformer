@@ -1,7 +1,7 @@
 # Arithmetic Transformer — README
 
 A small repo for generating datasets and training transformer-style models on arithmetic tasks (addition, subtraction, sorting, scratchpad formats, etc.).
-This README documents repository layout, a concise quickstart (generate data → (optional) update a config → train/evaluate).
+This README documents repository layout, a concise quickstart (generate data → (optional) update a config → train → evaluate).
 
 ---
 
@@ -44,8 +44,14 @@ python data_generate.py --task <task> --num_operands <n> --experiment_name <name
 
 Example:
 ```bash
+# Four operand addition data
 python data_generate.py --task addition --num_operands 4 --experiment_name 4_operands_0_to_999_uniform \
 --train_size 1000000 --test_size 10000 --val_size 10000 --train_eval True --sample-size 10000 --generate_reverse True
+```
+
+```bash
+# Two operand addition data
+!python data_generate.py --task addition --num_operands 2 --experiment_name 2_operands_0_to_999_uniform --train_size 10000 --test_size 3000 --val_size 3000 --train_eval True --sample-size 3000 --generate_reverse True
 ```
 
 #### Arguments (explanation)
@@ -70,13 +76,13 @@ python data_generate.py --task addition --num_operands 4 --experiment_name 4_ope
   Number of validation samples to generate.
 
 - `--train_eval` *(boolean-like: True / False, default: False)*
-  When True, after generation the script will run sample.py to create a train_eval.txt file sampled from train.txt. Accepted true values (case-insensitive): "true", "1", "yes". Any other value is treated as False.
+  When True, after generation the script will run sample.py to create a train_eval.txt file sampled from train.txt.
 
 - `--sample-size` *(int, default: 10000)*
   Number of lines to sample from train.txt when --train_eval is True. Passed to sample.py.
 
 - `--generate_reverse` *(boolean-like: True / False, default: False)*
-  When True the script will run reverse_results.py at the end to produce reverse-format files. Note: not every task may support the reverse step — the dispatcher checks whether the chosen task enables generate_reverse. Accepted true values (case-insensitive): "true", "1", "yes".
+  When True the script will run reverse_results.py at the end to produce reverse-format files. Note: not every task may support the reverse step — the dispatcher checks whether the chosen task enables generate_reverse.
 
 #### Output files (what to expect)
 
@@ -89,7 +95,7 @@ python data_generate.py --task addition --num_operands 4 --experiment_name 4_ope
 
 ### 2.2 (Optional) Configure the model
 
-1. Open an existing proto-config in configuration_files/, e.g. 4_operands_addition_reversed.txt.
+1. Open an existing proto-config in `configuration_files/`, e.g. 4_operands_addition_reversed.txt.
 2. Edit the fields below (common ones you will likely change):
 
 - eval_interval — do an evaluation every {eval_interval} iterations. Recommended: 1000.
@@ -98,11 +104,13 @@ python data_generate.py --task addition --num_operands 4 --experiment_name 4_ope
 - max_new_tokens — maximum output tokens. For 4-operand addition set at least 5.
 - max_iters — number of training iterations. Recommend at least 200000.
 - out_dir — output directory for this run (e.g. 'results/4_operands_0_to_999_uniform/plain_out').
-- data_dir — data directory, where all the data files to be used live under this directory. (e.g. 'data/4_operands_0_to_999_uniform/').
+- data_dir — data directory, where all the data files to be used for this run live under this directory. (e.g. 'data/4_operands_0_to_999_uniform/').
 - train_data_name — name of the training data (e.g. 'train.txt').
 - train_data_test_name — name of the sampled train_eval file (optional, e.g. "train_eval.txt").
 - val_data_name — name of the validation data (e.g. 'val.txt').
-- test_file_name — name of the test data (e.g. 'test.txt').
+- test_file_name — name of the test data (e.g. 'test.txt'). It can be either a single file, or the name of the directory that contains multiple test files.
+- main_test_name — the name, without extension, of the test file (in case there are multiple test files) that's to be displayed in wandb
+
 - mode — "compute_gold" or "read_gold_as_str". If your test files already include the gold answers, use "read_gold_as_str".
 
 Example snippet can be found at configuration_files/4_operands_addition_plain.txt.
@@ -111,23 +119,24 @@ Example snippet can be found at configuration_files/4_operands_addition_plain.tx
 
 ### 2.3 Run the model
 
-#### For a quick start: use this command
-#### only have to specify --task and --experiment_name (match the ones specified in the data generation step)
-
 ```bash
-python train.py --task addition --experiment_name 4_operands_0_to_999_uniform
+python train.py <configuration_file> [--batch]
 ```
-
-#### For a finer control: use this command
-#### The .txt file is the configuration file, configured in Section 2.2
-
+Example:
 ```bash
-!python train.py 4_operands_addition_plain.txt
+python train.py 4_operands_addition_plain.txt
 ```
+```bash
+python train.py 2_operands_addition_reversed.txt --batch slicing
+```
+#### Arguments (explanation)
 
-To run evaluation/analysis after training:
+- `<configuration_file>` **(required)**
+  Model configuration files as explained in 2.2. This file is supposed to live under `configuration_files/`. When the `operator` specified in the configuration file is '+', '-' or '*', the digitwise error evaluation will be performed once training finishes, the result graph will be stored under `out_dir`.
+- `[--batch]` *(string: per_example / slicing, default: per_example)*
+  Batch preparation method. If 'per_example', every block in a batch consists of a single training example (padded to block size). If 'slicing', every block is a slicing window (of length 'block_size') of the concatenated training data string. The starting position of each block is randomly drawn.
 
-result_analysis.ipynb contains some useful result analysis functions, such as one counting and drawing the digit-wise error vs iterations.
+
 
 ---
 
