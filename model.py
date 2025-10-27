@@ -168,8 +168,8 @@ class GPT(nn.Module):
 
     if targets is not None:
       logits = self.lm_head(x)
-      logits = logits.view(-1, logits.size(-1))   # (B*L, V)
-      targets = targets.view(-1)                  # (B*L,)
+      logits = logits.reshape(-1, logits.size(-1))   # (B*L, V)
+      targets = targets.reshape(-1)                  # (B*L,)
       loss = F.cross_entropy(logits, targets, ignore_index=self.pad_id)
     else:
       logits = self.lm_head(x[:,[-1],:])
