@@ -1,9 +1,13 @@
+from __future__ import annotations
+
+from torch import Tensor
 import os
 import pickle
 import numpy as np
 import random
 from tqdm import tqdm
 import copy
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -13,6 +17,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 import math
 import sys
+from typing import Iterable, List, Optional, Tuple, Union
 
 def encode_addition(text, meta):
     """Encode text to tensor using the metadata."""
@@ -196,7 +201,7 @@ def eval_model(model, metadata, dataset_list, digits_per_num=3, batch_size=128):
     eval_res["model_embeddings"] = calc_embed_scores(model)
     return eval_res
 
-def calc_mi_x_p(x, py_given_x):
+def calc_mi_x_p_old(x, py_given_x):
     """
     Estimate mutual information I(X; Y) from:
     - x: 1D tensor of n samples from X (discrete values)
@@ -234,6 +239,687 @@ def calc_mi_x_p(x, py_given_x):
 
     return {"mutual_info": float(mi), "normalized_mutual_info": float(mi/E_y)}
 
+
+########### OpenAI's Codex helped me with the following code ################
+
+
+_EPS = 1e-12
+
+
+def calc_mi_x_p(x: Tensor, py_given_x: Tensor) -> dict[str, float]:
+    """Estimate ``I(X; Y)`` from conditional model predictions.
+
+    Args:
+        x: A 1D integer tensor with ``n`` samples drawn from ``X``.
+        py_given_x: A 2D tensor of shape ``(n, k)`` where each row is the
+            conditional distribution :math:`p(y \mid x_i)`.
+
+    Returns:
+        A mapping with keys ``"mutual_info"`` and ``"normalized_mutual_info"``.
+    """
+
+    if x.ndim != 1:
+        raise ValueError("x must be a 1D tensor")
+    if py_given_x.ndim != 2:
+        raise ValueError("py_given_x must be a 2D tensor")
+    n, k = py_given_x.shape
+    if x.shape[0] != n:
+        raise ValueError("x and py_given_x must have the same number of samples")
+
+    device = py_given_x.device
+    dtype = py_given_x.dtype
+
+    unique_x, inverse_indices, counts = torch.unique(
+        x.to(device), return_inverse=True, return_counts=True
+    )
+    counts = counts.to(py_given_x.dtype)
+    px = counts / float(n)
+
+    # Aggregate conditional probabilities per unique x using scatter_add.
+    probs_sum = torch.zeros(unique_x.numel(), k, dtype=dtype, device=device)
+    probs_sum.scatter_add_(
+        0, inverse_indices.unsqueeze(-1).expand_as(py_given_x), py_given_x
+    )
+    py_given_x_avg = probs_sum / counts.unsqueeze(-1)
+
+    # Marginal p(y) and entropy H(Y).
+    py = torch.matmul(px.unsqueeze(0), py_given_x_avg).squeeze(0)
+    py = torch.clamp(py, min=_EPS)
+    entropy_y = -(py * py.log()).sum()
+
+    # Mutual information via KL divergence of p(y|x) to p(y).
+    ratio = torch.clamp(py_given_x_avg / py, min=_EPS)
+    kl_terms = torch.sum(py_given_x_avg * ratio.log(), dim=1)
+    mi = torch.sum(px * kl_terms)
+
+    if entropy_y <= _EPS:
+        normalized_mi = torch.tensor(0.0, device=device, dtype=dtype)
+    else:
+        normalized_mi = mi / entropy_y
+
+    return {
+        "mutual_info": float(mi.detach().cpu()),
+        "normalized_mutual_info": float(normalized_mi.detach().cpu()),
+    }
+
+
+def calc_mi_x_y(x: Tensor, y: Tensor) -> dict[str, float]:
+    """Estimate ``I(X; Y)`` empirically from paired observations ``(x, y)``.
+
+    Args:
+        x: A 1D integer tensor with ``n`` samples drawn from ``X``.
+        y: A 1D integer tensor with ``n`` samples drawn from ``Y``.
+
+    Returns:
+        A mapping with keys ``"mutual_info"`` and ``"normalized_mutual_info"``.
+    """
+
+    if x.ndim != 1 or y.ndim != 1:
+        raise ValueError("x and y must be 1D tensors")
+    if x.shape[0] != y.shape[0]:
+        raise ValueError("x and y must have the same number of samples")
+
+    n = x.shape[0]
+    device = x.device
+    dtype = torch.float32
+
+    unique_x, inverse_x, counts_x = torch.unique(
+        x, return_inverse=True, return_counts=True
+    )
+    unique_y, inverse_y, counts_y = torch.unique(
+        y, return_inverse=True, return_counts=True
+    )
+
+    px = counts_x.to(dtype) / float(n)
+    py = counts_y.to(dtype) / float(n)
+
+    # Joint probability p(x, y).
+    joint_indices = inverse_x * unique_y.numel() + inverse_y
+    joint_counts = torch.bincount(
+        joint_indices,
+        minlength=unique_x.numel() * unique_y.numel(),
+    ).reshape(unique_x.numel(), unique_y.numel())
+    pxy = joint_counts.to(dtype) / float(n)
+
+    entropy_y = -(py * torch.clamp(py, min=_EPS).log()).sum()
+
+    px_py = px.unsqueeze(1) * py.unsqueeze(0)
+    mask = pxy > 0
+    log_ratio = torch.zeros_like(pxy)
+    log_ratio[mask] = torch.log(torch.clamp(pxy[mask] / px_py[mask], min=_EPS))
+    mi = torch.sum(pxy[mask] * log_ratio[mask])
+
+    if entropy_y <= _EPS:
+        normalized_mi = torch.tensor(0.0, device=device, dtype=dtype)
+    else:
+        normalized_mi = mi / entropy_y
+
+    return {
+        "mutual_info": float(mi.detach().cpu()),
+        "normalized_mutual_info": float(normalized_mi.detach().cpu()),
+    }
+    
+    
+def calc_mi_x_y_z(x: torch.Tensor, y: torch.Tensor, z: torch.Tensor):
+    """Estimate empirical conditional mutual information I(X; Y | Z).
+
+    Args:
+        x: 1D integer tensor of samples from X.
+        y: 1D integer tensor of samples from Y (aligned with ``x``).
+        z: 1D integer tensor of samples from Z (aligned with ``x`` and ``y``).
+
+    Returns:
+        A dictionary with keys ``mutual_info`` and ``normalized_mutual_info``.
+        ``normalized_mutual_info`` divides I(X;Y|Z) by H(Y|Z).
+    """
+
+    assert x.dim() == y.dim() == z.dim() == 1, "Inputs must be 1D tensors"
+    n = x.shape[0]
+    assert y.shape[0] == n and z.shape[0] == n, "All inputs must have the same length"
+
+    x = x.to(torch.long)
+    y = y.to(torch.long)
+    z = z.to(torch.long)
+
+    total_mi = 0.0
+    total_cond_entropy = 0.0
+
+    z_vals, z_counts = torch.unique(z, return_counts=True)
+    for z_val, count in zip(z_vals, z_counts):
+        mask = (z == z_val)
+        p_z = count.item() / n
+
+        x_subset = x[mask]
+        y_subset = y[mask]
+        n_z = x_subset.shape[0]
+
+        x_vals = torch.unique(x_subset, sorted=True)
+        y_vals = torch.unique(y_subset, sorted=True)
+
+        x_index = {int(val.item()): idx for idx, val in enumerate(x_vals)}
+        y_index = {int(val.item()): idx for idx, val in enumerate(y_vals)}
+
+        joint = torch.zeros(len(x_vals), len(y_vals), dtype=torch.double)
+        pairs = torch.stack((x_subset, y_subset), dim=1)
+        unique_pairs, pair_counts = torch.unique(pairs, dim=0, return_counts=True)
+        for pair, cnt in zip(unique_pairs, pair_counts):
+            i = x_index[int(pair[0].item())]
+            j = y_index[int(pair[1].item())]
+            joint[i, j] = cnt.double() / n_z
+
+        px_given_z = joint.sum(dim=1)  # shape (num_x,)
+        py_given_z = joint.sum(dim=0)  # shape (num_y,)
+
+        mask_entropy = py_given_z > 0
+        H_y_given_z = -torch.sum(py_given_z[mask_entropy] * torch.log(py_given_z[mask_entropy]))
+        total_cond_entropy += p_z * H_y_given_z.item()
+
+        px_py = px_given_z.unsqueeze(1) * py_given_z.unsqueeze(0)
+        mask_joint = joint > 0
+        mi_z = torch.sum(joint[mask_joint] * torch.log(joint[mask_joint] / px_py[mask_joint]))
+        total_mi += p_z * mi_z.item()
+
+    normalized_mi = total_mi / total_cond_entropy if total_cond_entropy > 0 else 0.0
+
+    return {"mutual_info": float(total_mi), "normalized_mutual_info": float(normalized_mi)}
+
+
+def calc_mi_x_p_z(x: torch.Tensor, py_given_xz: torch.Tensor, z: torch.Tensor):
+    """Estimate I(X; Y | Z) using conditional probabilities p(y | x, z).
+
+    Args:
+        x: 1D integer tensor of samples from X.
+        py_given_xz: 2D tensor of shape (n, m) with conditional distributions p(y | x_i, z_i).
+        z: 1D integer tensor of samples from Z (aligned with ``x``).
+
+    Returns:
+        A dictionary with keys ``mutual_info`` and ``normalized_mutual_info``.
+        ``normalized_mutual_info`` divides I(X;Y|Z) by H(Y|Z).
+    """
+
+    assert x.dim() == z.dim() == 1, "x and z must be 1D tensors"
+    n = x.shape[0]
+    assert z.shape[0] == n, "x and z must have the same number of samples"
+    assert py_given_xz.shape[0] == n, "py_given_xz must align with samples"
+
+    x = x.to(torch.long)
+    z = z.to(torch.long)
+    py_given_xz = py_given_xz.to(torch.double)
+
+    total_mi = 0.0
+    total_cond_entropy = 0.0
+
+    z_vals, z_counts = torch.unique(z, return_counts=True)
+    for z_val, count in zip(z_vals, z_counts):
+        mask_z = (z == z_val)
+        p_z = count.item() / n
+
+        x_subset = x[mask_z]
+        py_subset = py_given_xz[mask_z]
+
+        x_vals, x_counts = torch.unique(x_subset, return_counts=True)
+        p_x_given_z = x_counts.double() / x_counts.sum()
+
+        # Aggregate conditional probabilities for each unique x
+        py_given_x_dict = {}
+        for x_val in x_vals:
+            mask_x = (x_subset == x_val)
+            py_given_x_dict[int(x_val.item())] = py_subset[mask_x].mean(dim=0)
+
+        # Compute p(y | z)
+        vocab_size = py_subset.shape[1]
+        py_given_z = torch.zeros(vocab_size, dtype=torch.double)
+        for idx, x_val in enumerate(x_vals):
+            py_given_z += p_x_given_z[idx].item() * py_given_x_dict[int(x_val.item())]
+        py_given_z = py_given_z / py_given_z.sum()
+
+        mask_entropy = py_given_z > 0
+        H_y_given_z = -torch.sum(py_given_z[mask_entropy] * torch.log(py_given_z[mask_entropy]))
+        total_cond_entropy += p_z * H_y_given_z.item()
+
+        # Compute I(X; Y | Z = z)
+        mi_z = 0.0
+        for idx, x_val in enumerate(x_vals):
+            p_x_z = p_x_given_z[idx].item()
+            if p_x_z == 0:
+                continue
+            py_given_x = py_given_x_dict[int(x_val.item())]
+            mask_valid = (py_given_x > 0) & (py_given_z > 0)
+            if mask_valid.any():
+                kl = torch.sum(py_given_x[mask_valid] * torch.log(py_given_x[mask_valid] / py_given_z[mask_valid]))
+                mi_z += p_x_z * kl.item()
+        total_mi += p_z * mi_z
+
+    normalized_mi = total_mi / total_cond_entropy if total_cond_entropy > 0 else 0.0
+
+    return {"mutual_info": float(total_mi), "normalized_mutual_info": float(normalized_mi)}
+
+
+## parsing
+
+_PLACE_TO_OFFSET = {
+    "unit": 0,
+    "tens": 1,
+    "hundreds": 2,
+    "thousands": 3,
+}
+
+
+def _resolve_digit_index(
+    number: str, place: str, start_index: int, *, reversed_digits: bool = False
+) -> int:
+    """Return the index of the requested place value digit within the expression.
+
+    Args:
+        number: Substring containing only the digits of the number of interest.
+        place: One of ``{"unit", "tens", "hundreds", "thousands"}`` describing
+            the desired place value.
+        start_index: The index within the full expression where ``number`` starts.
+        reversed_digits: If ``True``, ``number`` represents the digits of the
+            value in reverse order.
+
+    Returns:
+        The 0-based index in the full expression pointing to the requested digit.
+
+    Raises:
+        ValueError: If ``place`` is not recognised or the number does not have the
+            requested place value digit.
+    """
+
+    if place not in _PLACE_TO_OFFSET:
+        raise ValueError(f"Unsupported place specification: {place!r}")
+
+    offset = _PLACE_TO_OFFSET[place]
+    if offset >= len(number):
+        #raise ValueError(
+        #    f"Number {number!r} does not contain a digit in the {place} place"
+        #)
+        return float('nan')
+
+    if reversed_digits:
+        digit_index = offset
+    else:
+        digit_index = len(number) - 1 - offset
+    return start_index + digit_index
+
+def find_indices(lines, x_place, y_place, z_place="unit", reverse=False):
+    """Locate digit indices for the specified place values within expressions.
+
+    Args:
+        lines: Iterable of addition expressions such as ``"932+84+230+349=1595"``.
+        x_place: Place value to extract from the first operand.
+        y_place: Place value to extract from the result (right-hand side).
+        z_place: Place value to extract from the result (right-hand side).
+            Defaults to ``"unit"``.
+        reverse: Whether the digits of the result appear in reverse order.
+
+    Returns:
+        A list of tuples ``(x_idx, y_idx, z_idx)`` containing the 0-based indices
+        of the requested digits within each corresponding expression string.
+
+    Raises:
+        ValueError: If an expression is malformed or does not contain the
+            requested place value digits.
+    """
+
+    indices = []
+    for expr in lines:
+        expr = expr.strip().split('$')[0]
+        if "=" not in expr:
+            raise ValueError(f"Expression missing '=': {expr!r}")
+
+        lhs, rhs = expr.split("=", maxsplit=1)
+        lhs = lhs.strip()
+        rhs = rhs.strip()
+        if not rhs:
+            raise ValueError(f"Expression missing result after '=': {expr!r}")
+
+        # The first operand is always the first number on the LHS.
+        first_operand = lhs.split("+", maxsplit=1)[0]
+        if not first_operand.isdigit():
+            raise ValueError(
+                f"First operand must be a positive integer, got {first_operand!r}"
+            )
+
+        result = rhs
+        if not result.isdigit():
+            raise ValueError(f"Result must be a positive integer, got {result!r}")
+
+        x_idx = _resolve_digit_index(first_operand, x_place, 0)
+        equals_index = expr.index("=")
+        result_start = equals_index + 1
+        y_idx = _resolve_digit_index(
+            result, y_place, result_start, reversed_digits=reverse
+        )
+        z_idx = _resolve_digit_index(
+            result, z_place, result_start, reversed_digits=reverse
+        )
+        indices.append((x_idx, y_idx, z_idx))
+
+    return indices
+
+## parsing v2
+
+
+def _normalize_place(place: Union[str, int, None]) -> Union[str, int, None]:
+    """Normalize textual place names to a canonical lowercase form."""
+
+    if place is None or isinstance(place, int):
+        return place
+
+    normalized = str(place).replace("-", " ").replace("_", " ").lower().strip()
+    normalized = " ".join(normalized.split())  # collapse repeated whitespace
+    return normalized
+
+
+def _place_to_offset(place: Union[str, int, None]) -> Optional[int]:
+    """Convert a place specifier (e.g. "unit", 0) into a digit offset."""
+
+    if place is None:
+        return None
+
+    if isinstance(place, int):
+        if place < 0:
+            raise ValueError("Digit offsets must be non-negative integers.")
+        return place
+
+    normalized = _normalize_place(place)
+
+    place_mapping = {
+        "unit": 0,
+        "units": 0,
+        "ones": 0,
+        "one": 0,
+        "tens": 1,
+        "ten": 1,
+        "hundreds": 2,
+        "hundred": 2,
+        "thousands": 3,
+        "thousand": 3,
+        "ten thousands": 4,
+        "ten thousand": 4,
+        "hundred thousands": 5,
+        "hundred thousand": 5,
+    }
+
+    if normalized not in place_mapping:
+        raise ValueError(f"Unsupported place specifier: {place}")
+
+    return place_mapping[normalized]
+
+
+def _extract_numbers_with_positions(line: str) -> List[Tuple[str, int]]:
+    """Extract digit sequences and their start indices from ``line``."""
+
+    numbers: List[Tuple[str, int]] = []
+    current_start: Optional[int] = None
+
+    for idx, ch in enumerate(line):
+        if ch.isdigit():
+            if current_start is None:
+                current_start = idx
+        else:
+            if current_start is not None:
+                numbers.append((line[current_start:idx], current_start))
+                current_start = None
+
+    if current_start is not None:
+        numbers.append((line[current_start:], current_start))
+
+    return numbers
+
+def _digit_index(start_idx: int, number: str, place_offset: int, reverse: bool) -> Optional[int]:
+    """Return the absolute index for a requested place within ``number``."""
+
+    if place_offset >= len(number):
+        return float('nan')
+
+    if reverse:
+        char_offset = place_offset
+    else:
+        char_offset = len(number) - 1 - place_offset
+
+    return start_idx + char_offset
+
+
+
+def new_find_indices(
+    lines: Iterable[str],
+    x_place: Union[str, int],
+    y_place: Union[str, int],
+    z_place: Union[str, int] = "unit",
+    carry_place: Optional[Union[str, int]] = None,
+    reverse: bool = False,
+):
+    """Return indices of requested place values for operands and result.
+
+    ``x_place`` refers to the first operand on the left-hand side, while both
+    ``y_place`` and ``z_place`` refer to the result on the right-hand side.
+    """
+
+    x_offset = _place_to_offset(x_place)
+    y_offset = _place_to_offset(y_place)
+    z_offset = _place_to_offset(z_place)
+    carry_offset = _place_to_offset(carry_place)
+
+    x_indices: List[Optional[int]] = []
+    y_indices: List[Optional[int]] = []
+    z_indices: List[Optional[int]] = []
+    carry_indices: List[Tuple[Optional[int], ...]] = [] if carry_offset is not None else None
+
+    for line in lines:
+        numbers = _extract_numbers_with_positions(line)
+
+        if len(numbers) < 3:
+            raise ValueError(
+                "Each line must contain at least two operands and one result in the format 'a+b= c'."
+            )
+
+        operands = numbers[:-1]
+        result = numbers[-1]
+
+        if len(operands) < 2:
+            raise ValueError("Need at least two operands to extract x and y indices.")
+
+        first_operand = operands[0]
+        result_number = result
+
+        def _lookup(entry: Tuple[str, int], offset: Optional[int], reverse: bool) -> Optional[int]:
+            if offset is None:
+                return None
+            digits, start_idx = entry
+            return _digit_index(start_idx, digits, offset, reverse)
+
+        x_indices.append(_lookup(first_operand, x_offset, False))
+        y_indices.append(_lookup(result_number, y_offset, reverse))
+        z_indices.append(_lookup(result_number, z_offset, reverse))
+
+        if carry_offset is not None and carry_indices is not None:
+            carry_indices.append(tuple(_lookup(operand, carry_offset, False) for operand in operands))
+
+    if carry_indices is not None:
+        return x_indices, y_indices, z_indices, carry_indices
+    return x_indices, y_indices, z_indices
+
+## calculate probabilities from model 
+
+def get_token_probabilities_at_indices(
+    model,
+    metadata,
+    lines,
+    y_indices,
+    batch_size=128,
+    padding_token=0,
+):
+    """Return model probabilities for specific token positions.
+
+    Args:
+        model: Character-level transformer model.
+        metadata: Dictionary containing ``stoi``/``itos`` mappings and ``vocab``.
+        lines: List of ``n`` strings. Each string will be encoded into tokens.
+        y_indices: Iterable of length ``n`` with the (0-based) token indices of
+            the targets whose probabilities should be returned. The index is the
+            position of the token itself (not the following token).
+        batch_size: Optional mini-batch size used for the forward pass.
+        padding_token: Token ID used to right-pad sequences to a uniform length
+            when the encoded lines have different lengths.
+
+    Returns:
+        ``torch.Tensor`` of shape ``(n, vocab_size)`` with probability
+        distributions for the requested tokens.
+    """
+
+    if len(lines) == 0:
+        return torch.empty(0, len(metadata["vocab"]), dtype=torch.float)
+
+    token_seqs = [encode_addition(line, metadata) for line in lines]
+    seq_lengths = torch.tensor([seq.numel() for seq in token_seqs], dtype=torch.long)
+    max_len = seq_lengths.max().item()
+
+    tokens = torch.full((len(token_seqs), max_len), padding_token, dtype=torch.long)
+    for idx, seq in enumerate(token_seqs):
+        tokens[idx, : seq.numel()] = seq
+
+    y_indices = torch.as_tensor(y_indices, dtype=torch.long)
+    if y_indices.numel() != tokens.size(0):
+        raise ValueError("y_indices must have the same length as lines.")
+
+    if torch.any(y_indices < 1):
+        raise ValueError("y_indices must be at least 1 to compute probabilities.")
+
+    if torch.any(y_indices >= seq_lengths):
+        raise ValueError("Each y_index must be within the length of its corresponding line.")
+
+    vocab_size = len(metadata["vocab"])
+    n = tokens.size(0)
+    device = next(model.parameters()).device
+    probs_out = torch.empty(n, vocab_size, dtype=torch.float)
+
+    model.eval()
+    with torch.no_grad():
+        for start in range(0, n, batch_size):
+            end = min(start + batch_size, n)
+            batch_tokens = tokens[start:end].to(device)
+            inputs = batch_tokens[:, :-1]
+            targets = batch_tokens[:, 1:]
+            logits, _ = model(inputs, targets)
+
+            if logits.dim() == 2:
+                logits = logits.view(inputs.size(0), inputs.size(1), -1)
+
+            batch_probs = torch.softmax(logits, dim=-1)
+
+            batch_y_indices = (y_indices[start:end] - 1).to(device)
+            sample_ids = torch.arange(batch_tokens.size(0), device=device)
+            probs_out[start:end] = batch_probs[sample_ids, batch_y_indices, :].to("cpu")
+
+    return probs_out
+
+#############################################################################
+
+def gen_stats_test(num_operands, size=50_000, min=0, max=999, reverse=False, digits_per_num=None, mask=False):
+    """
+    gen_tats_test generates a dataset (a list of addition expression strings)
+    Arguments:
+        size: the size of dataset, namely the number of lines (list elements)
+        min, max: minimum and maximum integers of the range to be sampled
+        reverse: bool indicating whether the result is reversed
+        digits_per_num: the number of digits in each operand; if specified, max will be overwritten
+        mask: bool indicating whether small results are filtered and removed from dataset
+    Returns:
+        lines: a list of strings that represent addition math expressions
+    """
+    if digits_per_num is not None:
+        assert isinstance(digits_per_num, int)
+        warnings.warn("digits_per_num specified, overwriting max!")
+        max = (10 ** digits_per_num) - 1
+    operands = np.empty((size,num_operands), dtype=int)
+    for k in range(num_operands):
+        operands[:,k] = np.random.randint(min,max,size)
+    results = operands.sum(axis=1)
+    if mask:
+        mask = (results >= 10 ** (int(np.log10(max))))
+        operands = operands[mask]
+        results = results[mask]
+        size = operands.shape[0]
+
+    lines = []
+    for j in range(size):
+        if reverse:
+            line = "+".join([f"{str(operands[j,k])}" for k in range(num_operands)]) + f"={str(results[j])[::-1]}$"
+        else:
+            line = "+".join([f"{str(operands[j,k])}" for k in range(num_operands)]) + f"={str(results[j])}$"
+        lines.append(line)
+    return lines
+
+def find_xyz_dataset_mi(meta, lines, reverse=False, digit_places_list=None):
+    """
+    find_indices_dataset_mi extracts the tokens from data (lines of strings) as realized values of X, Y, Z, and calculates the mutual information I(X; Y) and conditional mutual information I(X; Y| Z)
+    Arguments:
+        meta: metadata that contains tokenizer
+        lines: a list of lines, where each line is a string with format f"{str(operand1[j])}+{str(operand2[j])}={str(result[j])}$" (not reverse)
+        reverse: bool indicating if result is reversed or not
+        digit_places_list: a list of tuples, each tuple indicates the digit places of X, Y, Z taken from the operand and result of each expression. We always use the first operand for X, and the result for Y and Z
+    Returns:
+        xyz_mi_list: a list of dictionaries, where each dictionary contains the realized values X, Y, Z, carries extracted from lines according to the digit places specified in digit_places_list, as well as various mutual information metrics such as I(X;Y) and I(X;Y|Z).
+    """
+    import math
+    N = len(lines)
+    if digit_places_list is None:
+        digit_places_list = [('hundreds', 'hundreds', 'thousands', 'hundreds')]
+    
+    M = len(digit_places_list) # number of MI measurements, each measurement corresponds to a set of (X, Y, Z, carry)
+    xyz_mi_list = []
+    for k, places in enumerate(digit_places_list):
+        x_indices, y_indices, z_indices, carry_indices = new_find_indices(lines, places[0], places[1], places[2], carry_place=places[3], reverse=reverse)
+        x = torch.empty(N, dtype=torch.long)
+        y = torch.empty(N, dtype=torch.long)
+        z = torch.empty(N, dtype=torch.long)
+        carries = torch.zeros(N, dtype=torch.long)
+        y_indices_cleaned = []
+        for j in range(N):
+            x[j] = meta['stoi'][lines[j][x_indices[j]]] if not np.isnan(x_indices[j]) else meta['stoi']['0'] # find token for hidden '0' if len(operand_1) < 3
+            y[j] = meta['stoi'][lines[j][y_indices[j]]] if not np.isnan(y_indices[j]) else meta['stoi']['$'] # only works if reverse is True
+            z[j] = meta['stoi'][lines[j][z_indices[j]]] if not np.isnan(z_indices[j]) else meta['stoi']['$'] # only works if reverse is True
+            for k, item in enumerate(carry_indices[j]):
+                if math.isnan(item):
+                    continue
+                carries[j] += int(lines[j][item])
+            carries[j] = carries[j] // 10
+            tmp = y_indices[j] if not np.isnan(y_indices[j]) else len(lines[j])-1
+            y_indices_cleaned.append(tmp)
+        o0 = calc_mi_x_y(x,y)
+        o2 = calc_mi_x_y_z(x,y,z)
+        o4 = calc_mi_x_y_z(x,y,carries)
+        mi = [[o['mutual_info'], o['normalized_mutual_info']] for o in [o0, o2, o4]]
+        xyz_mi = {"x": x, "y": y, "z": z, "carries": carries, "places": places, "y_indices_cleaned": y_indices_cleaned, "mi": mi}
+        xyz_mi_list.append(xyz_mi)
+    return xyz_mi_list
+
+def calc_model_dataset_mi_v2(model, meta, lines, xyz_mi_list, reverse=False, batch_size=128, padding_token=0):
+    """
+    calc_model_dataset_mi estimate mutual information I(X; Y) for various pairs of digits X and Y from both data and model prediction probs, and conditional mutual information I(X; Y| Z)
+    Arguments:
+        lines: a list of lines, where each line is a string with format f"{str(operand1[j])}+{str(operand2[j])}={str(result[j])}$" (not reverse)
+        reverse: bool indicating if result is reversed or not
+        digit_places_list: a list of tuples, each tuple indicates the digit places of X, Y, Z taken from the operand and result of each expression. We always use the first operand for X, and the result for Y and Z
+    Returns:
+        mi_list: a list of arrays, where each array contains the mutual information metrics for specified digit places from digit_places_list
+    """
+    N = len(lines)
+    mi_list = []
+    for k, xyz_mi in enumerate(xyz_mi_list):
+        probs = get_token_probabilities_at_indices(model, meta, lines, xyz_mi["y_indices_cleaned"], batch_size=batch_size, padding_token=padding_token)
+        o1 = calc_mi_x_p(xyz_mi['x'], probs)
+        o3 = calc_mi_x_p_z(xyz_mi['x'], probs, xyz_mi['z'])
+        o5 = calc_mi_x_p_z(xyz_mi['x'], probs, xyz_mi['carries'])
+        mi = [[o['mutual_info'], o['normalized_mutual_info']] for o in [o1, o3, o5]]
+        mi_list.append(mi)
+    return mi_list
+        
+
+    
+# older version    
 
 def calc_model_dataset_mi(model, metadata, data, digits_per_num=3, batch_size=128, drop_leading_digit=False):
     """
