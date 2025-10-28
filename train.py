@@ -553,6 +553,7 @@ def get_lr_for_iter(iter_num):
 # logging
 if wandb_log and master_process:
     import wandb
+    wandb.finish()  # ensures previous runs are closed
     wandb.init(project=wandb_project, name=wandb_run_name, config=config, dir = out_dir)
     wandb.define_metric("lr", step_metric="iter")
     wandb.define_metric("iter",   step_metric="iter")
