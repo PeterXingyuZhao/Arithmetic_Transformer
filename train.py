@@ -268,7 +268,7 @@ def set_seed(seed):
     np.random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     # to make sure GPU runs are deterministic even if they are slower set this to True
-    torch.backends.cudnn.deterministic = False
+    torch.backends.cudnn.deterministic = True  ## CHANGED
     # warning: this causes the code to vary across runs
     torch.backends.cudnn.benchmark = True
     print("Seeded everything: {}".format(seed))
@@ -283,7 +283,7 @@ torch.manual_seed(1337 + seed_offset)
 torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
 torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
 torch.backends.cudnn.benchmark = True # cudnn auto-tuner
-torch.backends.cudnn.deterministic = False # cudnn auto-tuner
+torch.backends.cudnn.deterministic = True # cudnn auto-tuner ## CHANGED
 # this is probably overkill but seed everything again
 set_seed(1337 + seed_offset)
 
