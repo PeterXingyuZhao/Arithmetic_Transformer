@@ -262,16 +262,20 @@ def get_batch(split):
 # function to set seed for all random number generators
 def set_seed(seed):
     random.seed(seed)
+    np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    np.random.seed(seed)
+    torch.use_deterministic_algorithms(True)
     os.environ['PYTHONHASHSEED'] = str(seed)
     # to make sure GPU runs are deterministic even if they are slower set this to True
     torch.backends.cudnn.deterministic = True
     # warning: this causes the code to vary across runs
     torch.backends.cudnn.benchmark = False
-    print("Seeded everything: {}".format(seed))
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    torch.set_float32_matmul_precision("high")
+    #print("Seeded everything: {}".format(seed))
 
 if min_lr == None:
     min_lr = learning_rate/10
@@ -279,11 +283,11 @@ master_process = True
 seed_offset = 0
 if master_process:
   os.makedirs(out_dir, exist_ok=True)
-torch.manual_seed(42 + seed_offset)
-torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
-torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
-torch.backends.cudnn.benchmark = False # cudnn auto-tuner
-torch.backends.cudnn.deterministic = True # cudnn auto-tuner
+#torch.manual_seed(42 + seed_offset)
+#torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
+#torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
+#torch.backends.cudnn.benchmark = False # cudnn auto-tuner
+#torch.backends.cudnn.deterministic = True # cudnn auto-tuner
 # this is probably overkill but seed everything again
 set_seed(42 + seed_offset)
 
