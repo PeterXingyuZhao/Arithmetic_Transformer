@@ -612,17 +612,17 @@ import time
 t0 = time.time()
 local_iter_num = 0 # number of iterations in the lifetime of this process
 raw_model = model
-running_mfu = -1.0
-iter_num = 0
+running_mfu = -1.0  
+iter_num = 0  
 
 max_iters = config.get('max_iters', 10000)
  # number of epochs to warm up learning rate
 
 # Initialize tracking variables
-iter_num = 0
+iter_num = 0  ## NOTE: redundant line (defined a few lines above)
 best_val_loss = 1e9
 best_accuracy = -1
-running_mfu = -1.0
+running_mfu = -1.0 ## NOTE: redundant line (defined a few lines above)
 
 # Create infinite data loader
 def get_infinite_dataloader(dataloader):
@@ -635,6 +635,18 @@ if 'max_new_tokens' in config.keys():
     print(f"max_new_tokens: {config['max_new_tokens']}")
 else:
     print(f"max_new_tokens used: {num_digit+2}")
+
+#### ADDED
+DIGIT_PLACES_LIST = [('units', 'units', 'tens', 'units'), 
+                     ('tens', 'tens', 'hundreds', 'tens'),
+                     ('hundreds', 'hundreds', 'thousands', 'hundreds'),
+                     ('hundreds', 'thousands', 'thousands', 'thousands')]
+
+num_operands = int(ckpt_path_name.split('_operands')[0][-1])
+reverse = 'reverse' in ckpt_path_name
+mi_lines = gen_stats_test(num_operands, reverse=reverse)
+xyz_mi_list = find_xyz_dataset_mi(meta, mi_lines, digit_places_list=DIGIT_PLACES_LIST, reverse=reverse)
+#### End of ADDED
 
 # Training loop - iteration based
 while iter_num < max_iters:
@@ -666,81 +678,81 @@ while iter_num < max_iters:
     scaler.update()
     optimizer.zero_grad(set_to_none=True)
     
-    # Do additional statistical measurements
-    if mi_measurement:
-        if iter_num in mi_measure_iters:
-            model.eval()
-            
-            with torch.no_grad():
-                # eval_res = eval_model(model, meta, stats_measurement_dataset_list, digits_per_num=num_digit, batch_size=test_batch_size)
-                mi_stats = calc_model_dataset_mi(
-                    model = model,
-                    metadata = meta,
-                    data = stats_measurement_data,
-                    digits_per_num = num_digit,
-                    batch_size = test_batch_size,
-                    drop_leading_digit = drop_leading_digit
-                )
-
-            # for name, stats in eval_res.items():
-            #     if name == "model_embeddings":
-            #         continue
-            #     if name == 'base':
-            #         row = {
-            #             'iter': iter_num,
-            #             'ave_correct_probs': stats['ave_correct_probs'],
-            #             'ave_correct_preds': stats['ave_correct_preds'],
-            #         }
-            #     else:
-            #         row = {
-            #             'iter': iter_num,
-            #             'ave_correct_probs': stats['ave_correct_probs'],
-            #             'ave_correct_preds': stats['ave_correct_preds'],
-            #             'ave_diff_probs_L1': stats['ave_diff_probs_L1'],
-            #             'ave_diff_probs_L2': stats['ave_diff_probs_L2'],
-            #             'ave_diff_probs_kl': stats['ave_diff_probs_kl'],
-            #             'ave_diff_logits_L1': stats['ave_diff_logits_L1'],
-            #             'ave_diff_logits_L2': stats['ave_diff_logits_L2'],
-            #             'ave_diff_preds': stats['ave_diff_preds'],
-            #         }
-            #     # Write to the CSV file for this dataset
-            #     csv_writers[name].writerow(row)
-
-            
-            # Calculate output-output mutual information
-            mi_mat = mi_stats['output-output']['mutual_info']
-            nmi_mat = mi_stats['output-output']['normalized_mutual_info']
-            for i in range(mi_mat.shape[0]):
-                for j in range(i, mi_mat.shape[1]):
-                    stats_oo.append({
-                        'iter': iter_num,
-                        'i': i,
-                        'j': j,
-                        'mi': mi_mat[i, j].item(),
-                        'nmi': nmi_mat[i, j].item()
-                    })
-
-            # also calculate input-output mutual information
-            mi_mat_io = mi_stats['input-output']['mutual_info']
-            nmi_mat_io = mi_stats['input-output']['normalized_mutual_info']
-            for i in range(mi_mat_io.shape[0]):
-                for j in range(mi_mat_io.shape[1]):
-                    stats_io.append({
-                        'iter': iter_num,
-                        'i': i,
-                        'j': j,
-                        'mi': mi_mat_io[i, j].item(),
-                        'nmi': nmi_mat_io[i, j].item()
-                    })
-
-            # **NOW write out the two MI CSVs immediately:**
-            stats_oo_df = pd.DataFrame(stats_oo)
-            stats_oo_df.to_csv(os.path.join(result_dir, 'output_output_mi.csv'), index=False)
-
-            stats_io_df = pd.DataFrame(stats_io)
-            stats_io_df.to_csv(os.path.join(result_dir, 'input_output_mi.csv'), index=False)
-
-            model.train()
+    # REMOVED: Do additional statistical measurements 
+    #if mi_measurement:
+    #    if iter_num in mi_measure_iters:
+    #        model.eval()
+    #        
+    #        with torch.no_grad():
+    #            # eval_res = eval_model(model, meta, stats_measurement_dataset_list, digits_per_num=num_digit, batch_size=test_batch_size)
+    #            mi_stats = calc_model_dataset_mi(
+    #                model = model,
+    #                metadata = meta,
+    #                data = stats_measurement_data,
+    #                digits_per_num = num_digit,
+    #                batch_size = test_batch_size,
+    #                drop_leading_digit = drop_leading_digit
+    #            )
+    #
+    #        # for name, stats in eval_res.items():
+    #        #     if name == "model_embeddings":
+    #        #         continue
+    #        #     if name == 'base':
+    #        #         row = {
+    #        #             'iter': iter_num,
+    #        #             'ave_correct_probs': stats['ave_correct_probs'],
+    #        #             'ave_correct_preds': stats['ave_correct_preds'],
+    #        #         }
+    #        #     else:
+    #        #         row = {
+    #        #             'iter': iter_num,
+    #        #             'ave_correct_probs': stats['ave_correct_probs'],
+    #        #             'ave_correct_preds': stats['ave_correct_preds'],
+    #        #             'ave_diff_probs_L1': stats['ave_diff_probs_L1'],
+    #        #             'ave_diff_probs_L2': stats['ave_diff_probs_L2'],
+    #        #             'ave_diff_probs_kl': stats['ave_diff_probs_kl'],
+    #        #             'ave_diff_logits_L1': stats['ave_diff_logits_L1'],
+    #        #             'ave_diff_logits_L2': stats['ave_diff_logits_L2'],
+    #        #             'ave_diff_preds': stats['ave_diff_preds'],
+    #        #         }
+    #        #     # Write to the CSV file for this dataset
+    #        #     csv_writers[name].writerow(row)
+    #
+    #        
+    #        # Calculate output-output mutual information
+    #        mi_mat = mi_stats['output-output']['mutual_info']
+    #        nmi_mat = mi_stats['output-output']['normalized_mutual_info']
+    #        for i in range(mi_mat.shape[0]):
+    #            for j in range(i, mi_mat.shape[1]):
+    #                stats_oo.append({
+    #                    'iter': iter_num,
+    #                    'i': i,
+    #                    'j': j,
+    #                    'mi': mi_mat[i, j].item(),
+    #                    'nmi': nmi_mat[i, j].item()
+    #                })
+    #
+    #        # also calculate input-output mutual information
+    #        mi_mat_io = mi_stats['input-output']['mutual_info']
+    #        nmi_mat_io = mi_stats['input-output']['normalized_mutual_info']
+    #        for i in range(mi_mat_io.shape[0]):
+    #            for j in range(mi_mat_io.shape[1]):
+    #                stats_io.append({
+    #                    'iter': iter_num,
+    #                    'i': i,
+    #                    'j': j,
+    #                    'mi': mi_mat_io[i, j].item(),
+    #                    'nmi': nmi_mat_io[i, j].item()
+    #                })
+    #
+    #        # **NOW write out the two MI CSVs immediately:**
+    #        stats_oo_df = pd.DataFrame(stats_oo)
+    #        stats_oo_df.to_csv(os.path.join(result_dir, 'output_output_mi.csv'), index=False)
+    #
+    #        stats_io_df = pd.DataFrame(stats_io)
+    #        stats_io_df.to_csv(os.path.join(result_dir, 'input_output_mi.csv'), index=False)
+    #
+    #        model.train()
         
     # Evaluation
     if iter_num % eval_interval == 0 or (more_early_eval1 and iter_num <= early_eval_border1 and iter_num % early_eval_interval1 == 0) or (more_early_eval2 and iter_num <= early_eval_border2 and iter_num % early_eval_interval2 == 0):
@@ -824,7 +836,34 @@ while iter_num < max_iters:
             
             # Add train accuracy to wandb_dict
             wandb_dict["train/accuracy"] = train_accuracy
-        
+
+            #### ADDED
+            if mi_measurement:
+                if iter_num == 0:
+                    mi_record_dict = {}
+                model.eval()
+                with torch.no_grad():
+                    mi_stats = calc_model_dataset_mi_v2(
+                        model = model,
+                        meta = meta,
+                        lines = mi_lines,
+                        xyz_mi_list = xyz_mi_list,
+                        reverse = reverse,
+                        batch_size = test_batch_size,
+                        padding_token = train_dataset.pad_id
+                    )    
+                mi_record_dict[f"iter_{iter_num}"] = mi_stats
+                wandb_dict["mi/units"] = mi_stats[0][2][0]
+                wandb_dict["mi/tens"] = mi_stats[1][2][0]
+                wandb_dict["mi/hundreds"] = mi_stats[2][2][0]
+                wandb_dict["mi/thousands"] = mi_stats[3][0][0]
+                wandb_dict["mi/units-base"] = xyz_mi_list[0]['mi'][2][0]
+                wandb_dict["mi/tens-base"] = xyz_mi_list[1]['mi'][2][0]
+                wandb_dict["mi/hundreds-base"] = xyz_mi_list[2]['mi'][2][0]
+                wandb_dict["mi/thousands-base"] = xyz_mi_list[3]['mi'][0][0]
+                model.train()
+            #### End of ADDED
+      
         # Update and save basic metrics
         result_dict['iter'].append(iter_num)
         result_dict['train_loss'].append(losses['train'].item())
