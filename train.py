@@ -266,7 +266,7 @@ def set_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    torch.use_deterministic_algorithms(True)
+    #torch.use_deterministic_algorithms(True)  # TODO: threw an error, need to check if CUDA supports deterministic algorithm in the current setting
     os.environ['PYTHONHASHSEED'] = str(seed)
     # to make sure GPU runs are deterministic even if they are slower set this to True
     torch.backends.cudnn.deterministic = True
@@ -289,7 +289,7 @@ if master_process:
 #torch.backends.cudnn.benchmark = False # cudnn auto-tuner
 #torch.backends.cudnn.deterministic = True # cudnn auto-tuner
 # this is probably overkill but seed everything again
-set_seed(42 + seed_offset)
+set_seed(1337 + seed_offset)
 
 device_type = 'cuda' if 'cuda' in device else 'cpu' # for later use in torch.autocast
 # note: float16 data type will automatically use a GradScaler
