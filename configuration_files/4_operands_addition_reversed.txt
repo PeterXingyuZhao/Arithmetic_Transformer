@@ -4,7 +4,7 @@ eval_iters = 1
 always_save_checkpoint = True
 
 wandb_log = True # override via command line if you like
-wandb_project = 'addition'
+wandb_project = '4_op_addition'
 
 # to edit: wandb run name
 wandb_run_name = '4_operands_0_to_999_uniform_reverse'
