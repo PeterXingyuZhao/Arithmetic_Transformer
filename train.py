@@ -128,7 +128,7 @@ early_eval_interval2 = 5
 early_eval_border2 = 500
 
 # additional statistical measurements
-mi_measurement = False # whether to do mutual information measurement
+mi_measurement = True # whether to do mutual information measurement
 early_mi_measure_border = 20000 # border for early mutual information measurement
 early_mi_measure_interval = 1000 # interval for early mutual information measurement
 final_mi_measure_interval = 5000 # interval for final mutual information measurement
