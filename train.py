@@ -642,8 +642,8 @@ DIGIT_PLACES_LIST = [('units', 'units', 'tens', 'units'),
                      ('hundreds', 'hundreds', 'thousands', 'hundreds'),
                      ('hundreds', 'thousands', 'thousands', 'thousands')]
 
-num_operands = int(ckpt_path_name.split('_operands')[0][-1])
-reverse = 'reverse' in ckpt_path_name
+num_operands = int(out_dir.split('_operands')[0][-1])
+reverse = 'reverse' in out_dir
 mi_lines = gen_stats_test(num_operands, reverse=reverse)
 xyz_mi_list = find_xyz_dataset_mi(meta, mi_lines, digit_places_list=DIGIT_PLACES_LIST, reverse=reverse)
 #### End of ADDED
