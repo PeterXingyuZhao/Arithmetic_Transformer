@@ -6,6 +6,18 @@ import math
 import inspect
 from dataclasses import dataclass
 
+
+def rotate_half(x):
+    x1 = x[..., ::2]
+    x2 = x[..., 1::2]
+    return torch.stack((-x2, x1), dim=-1).flatten(-2)
+
+
+def apply_rotary_pos_emb(q, k, cos, sin):
+    q_embed = (q * cos) + (rotate_half(q) * sin)
+    k_embed = (k * cos) + (rotate_half(k) * sin)
+    return q_embed, k_embed
+
 def new_gelu(x):
     """
     Implementation of the GELU activation function currently in Google BERT repo (identical to OpenAI GPT).
@@ -36,9 +48,14 @@ class CasualSelfAttention(nn.Module):
     self.resid_dropout = nn.Dropout(config.dropout)
     self.n_head = config.n_head
     self.n_embd = config.n_embd
+    self.head_dim = config.n_embd // config.n_head
     self.dropout = config.dropout
     self.use_flash = config.use_flash
     self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention') and self.use_flash
+    inv_freq = 1.0 / (10000 ** (torch.arange(0, self.head_dim, 2).float() / self.head_dim))
+    self.register_buffer("inv_freq", inv_freq, persistent=False)
+    self.cos_cached = None
+    self.sin_cached = None
     if not self.flash:
             print("WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0")
             # causal mask to ensure that attention is only applied to the left in the input sequence
@@ -46,12 +63,37 @@ class CasualSelfAttention(nn.Module):
                                         .view(1, 1, config.block_size, config.block_size))
     else:
       print("Using Flash attention")
+
+  def _get_rotary_embedding(self, seq_len, device, dtype):
+    if (
+        self.cos_cached is not None
+        and self.cos_cached.size(-2) >= seq_len
+        and self.cos_cached.device == device
+        and self.cos_cached.dtype == dtype
+    ):
+      return (
+          self.cos_cached[..., :seq_len, :],
+          self.sin_cached[..., :seq_len, :],
+      )
+
+    inv_freq = self.inv_freq.to(device=device, dtype=dtype)
+    t = torch.arange(seq_len, device=device, dtype=dtype)
+    freqs = torch.einsum("i,j->ij", t, inv_freq)
+    emb = torch.cat((freqs, freqs), dim=-1)
+    cos = emb.cos()[None, None, :, :]
+    sin = emb.sin()[None, None, :, :]
+    self.cos_cached = cos
+    self.sin_cached = sin
+    return cos, sin
   def forward(self,x):
     B, T, C = x.size() # batch_size, sequence length, embedding dimension
     q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
     k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
     q = q.view(B, T, self.n_head, C // self.n_head).transpose(1,2)
     v = v.view(B, T, self.n_head, C // self.n_head).transpose(1,2)
+
+    cos, sin = self._get_rotary_embedding(T, device=x.device, dtype=x.dtype)
+    q, k = apply_rotary_pos_emb(q, k, cos, sin)
 
     if self.flash:
       y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask = None, dropout_p = self.dropout if self.training else 0, is_causal = True)
@@ -118,7 +160,6 @@ class GPT(nn.Module):
 
     self.transformer = nn.ModuleDict(dict(
         wte = nn.Embedding(config.vocab_size, config.n_embd),
-        wpe = nn.Embedding(config.block_size, config.n_embd),
         drop = nn.Dropout(config.dropout),
         h = nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
         ln_f = LayerNorm(config.n_embd, bias=config.bias),
@@ -148,22 +189,14 @@ class GPT(nn.Module):
       n_params -= self.transformer.wte.weight.numel()
     return n_params
 
-  def forward(self, idx, targets=None, get_hidden_embedding=None):
-    device = idx.device
+  def forward(self, idx, targets=None):
     b, t = idx.size()
     assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
-    pos = torch.arange(0, t, dtype=torch.long, device=device) # shape (t)
 
     tok_emd = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
-    pos_emd = self.transformer.wpe(pos) # position embeddings of shape (1, t, n_embd)
-    x = self.transformer.drop(tok_emd + pos_emd)
+    x = self.transformer.drop(tok_emd)
     for block in self.transformer.h:
       x = block(x)
-
-    # for i, block in enumerate(self.transformer.h):
-    #   x = block(x)
-    #   if get_hidden_embedding is not None and i == get_hidden_embedding:
-    #      h_l = x
     x = self.transformer.ln_f(x)
 
     if targets is not None:

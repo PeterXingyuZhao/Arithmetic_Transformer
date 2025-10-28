@@ -1,10 +1,10 @@
 # to edit: do an evaluation every {eval_interval} iterations
-eval_interval = 500
+eval_interval = 100
 eval_iters = 1
 always_save_checkpoint = True
 
 wandb_log = True # override via command line if you like
-wandb_project = 'addition'
+wandb_project = '2_op_addition'
 
 # to edit: wandb run name
 wandb_run_name = '2_operands_0_to_999_uniform_gold_by_reading_reverse'

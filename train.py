@@ -128,7 +128,7 @@ early_eval_interval2 = 5
 early_eval_border2 = 500
 
 # additional statistical measurements
-mi_measurement = False # whether to do mutual information measurement
+mi_measurement = True # whether to do mutual information measurement
 early_mi_measure_border = 20000 # border for early mutual information measurement
 early_mi_measure_interval = 1000 # interval for early mutual information measurement
 final_mi_measure_interval = 5000 # interval for final mutual information measurement
@@ -262,16 +262,20 @@ def get_batch(split):
 # function to set seed for all random number generators
 def set_seed(seed):
     random.seed(seed)
+    np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    np.random.seed(seed)
+    #torch.use_deterministic_algorithms(True)  # TODO: threw an error, need to check if CUDA supports deterministic algorithm in the current setting
     os.environ['PYTHONHASHSEED'] = str(seed)
     # to make sure GPU runs are deterministic even if they are slower set this to True
-    torch.backends.cudnn.deterministic = False
+    torch.backends.cudnn.deterministic = True
     # warning: this causes the code to vary across runs
-    torch.backends.cudnn.benchmark = True
-    print("Seeded everything: {}".format(seed))
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    torch.set_float32_matmul_precision("high")
+    #print("Seeded everything: {}".format(seed))
 
 if min_lr == None:
     min_lr = learning_rate/10
@@ -279,11 +283,11 @@ master_process = True
 seed_offset = 0
 if master_process:
   os.makedirs(out_dir, exist_ok=True)
-torch.manual_seed(1337 + seed_offset)
-torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
-torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
-torch.backends.cudnn.benchmark = True # cudnn auto-tuner
-torch.backends.cudnn.deterministic = False # cudnn auto-tuner
+#torch.manual_seed(42 + seed_offset)
+#torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
+#torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
+#torch.backends.cudnn.benchmark = False # cudnn auto-tuner
+#torch.backends.cudnn.deterministic = True # cudnn auto-tuner
 # this is probably overkill but seed everything again
 set_seed(1337 + seed_offset)
 
@@ -404,25 +408,25 @@ meta_vocab_size = meta['vocab_size']
 print(f"Using vocabulary size: {meta_vocab_size}")
 
 
-if mi_measurement:
-    with open(stats_measurement_data_file_path, 'r', encoding='utf-8') as f:
-        lines = [line.rstrip() for line in f]
-
-    if drop_leading_digit:
-            S = num_digit
-    else:
-        S = num_digit + 1
-    # a simple way to parse test strings
-    padded_lines = [] # add 0 padding, remove $; an example padded_lines[6] is '932+084+230+349=5951'
-    for i in range(len(lines)):
-        numbers = re.split(r'[+=]', lines[i])
-        numbers[-1] = numbers[-1][:-1]
-        for k, number in enumerate(numbers[:-1]):
-            numbers[k] = '0' * (3-len(number)) + number
-        numbers[-1] = numbers[-1] + '0' * (S-len(numbers[-1]))
-        padded_lines.append("+".join(numbers[:-1]) + "=" + numbers[-1])
-
-    stats_measurement_data = torch.cat([encode_addition(padded_lines[i], meta).unsqueeze(0) for i in range(len(padded_lines))], dim=0)
+#if mi_measurement:
+#    with open(stats_measurement_data_file_path, 'r', encoding='utf-8') as f:
+#        lines = [line.rstrip() for line in f]
+#
+#    if drop_leading_digit:
+#            S = num_digit
+#    else:
+#        S = num_digit + 1
+#    # a simple way to parse test strings
+#    padded_lines = [] # add 0 padding, remove $; an example padded_lines[6] is '932+084+230+349=5951'
+#    for i in range(len(lines)):
+#        numbers = re.split(r'[+=]', lines[i])
+#        numbers[-1] = numbers[-1][:-1]
+#        for k, number in enumerate(numbers[:-1]):
+#            numbers[k] = '0' * (3-len(number)) + number
+#        numbers[-1] = numbers[-1] + '0' * (S-len(numbers[-1]))
+#        padded_lines.append("+".join(numbers[:-1]) + "=" + numbers[-1])
+#
+#    stats_measurement_data = torch.cat([encode_addition(padded_lines[i], meta).unsqueeze(0) for i in range(len(padded_lines))], dim=0)
 
 # # get 16 different datasets (including the base dataset) by randomizing input/output integers of the base dataset
 # stats_measurement_dataset_list = gen_randomized_datasets(
@@ -553,6 +557,7 @@ def get_lr_for_iter(iter_num):
 # logging
 if wandb_log and master_process:
     import wandb
+    wandb.finish()  # ensures previous runs are closed
     wandb.init(project=wandb_project, name=wandb_run_name, config=config, dir = out_dir)
     wandb.define_metric("lr", step_metric="iter")
     wandb.define_metric("iter",   step_metric="iter")
@@ -612,17 +617,17 @@ import time
 t0 = time.time()
 local_iter_num = 0 # number of iterations in the lifetime of this process
 raw_model = model
-running_mfu = -1.0
-iter_num = 0
+running_mfu = -1.0  
+iter_num = 0  
 
 max_iters = config.get('max_iters', 10000)
  # number of epochs to warm up learning rate
 
 # Initialize tracking variables
-iter_num = 0
+iter_num = 0  ## NOTE: redundant line (defined a few lines above)
 best_val_loss = 1e9
 best_accuracy = -1
-running_mfu = -1.0
+running_mfu = -1.0 ## NOTE: redundant line (defined a few lines above)
 
 # Create infinite data loader
 def get_infinite_dataloader(dataloader):
@@ -635,6 +640,18 @@ if 'max_new_tokens' in config.keys():
     print(f"max_new_tokens: {config['max_new_tokens']}")
 else:
     print(f"max_new_tokens used: {num_digit+2}")
+
+#### ADDED
+DIGIT_PLACES_LIST = [('units', 'units', 'tens', 'units'), 
+                     ('tens', 'tens', 'hundreds', 'tens'),
+                     ('hundreds', 'hundreds', 'thousands', 'hundreds'),
+                     ('hundreds', 'thousands', 'thousands', 'thousands')]
+
+num_operands = int(out_dir.split('_operands')[0][-1])
+reverse = 'reverse' in out_dir
+mi_lines = gen_stats_test(num_operands, reverse=reverse)
+xyz_mi_list = find_xyz_dataset_mi(meta, mi_lines, digit_places_list=DIGIT_PLACES_LIST, reverse=reverse)
+#### End of ADDED
 
 # Training loop - iteration based
 while iter_num < max_iters:
@@ -666,81 +683,81 @@ while iter_num < max_iters:
     scaler.update()
     optimizer.zero_grad(set_to_none=True)
     
-    # Do additional statistical measurements
-    if mi_measurement:
-        if iter_num in mi_measure_iters:
-            model.eval()
-            
-            with torch.no_grad():
-                # eval_res = eval_model(model, meta, stats_measurement_dataset_list, digits_per_num=num_digit, batch_size=test_batch_size)
-                mi_stats = calc_model_dataset_mi(
-                    model = model,
-                    metadata = meta,
-                    data = stats_measurement_data,
-                    digits_per_num = num_digit,
-                    batch_size = test_batch_size,
-                    drop_leading_digit = drop_leading_digit
-                )
-
-            # for name, stats in eval_res.items():
-            #     if name == "model_embeddings":
-            #         continue
-            #     if name == 'base':
-            #         row = {
-            #             'iter': iter_num,
-            #             'ave_correct_probs': stats['ave_correct_probs'],
-            #             'ave_correct_preds': stats['ave_correct_preds'],
-            #         }
-            #     else:
-            #         row = {
-            #             'iter': iter_num,
-            #             'ave_correct_probs': stats['ave_correct_probs'],
-            #             'ave_correct_preds': stats['ave_correct_preds'],
-            #             'ave_diff_probs_L1': stats['ave_diff_probs_L1'],
-            #             'ave_diff_probs_L2': stats['ave_diff_probs_L2'],
-            #             'ave_diff_probs_kl': stats['ave_diff_probs_kl'],
-            #             'ave_diff_logits_L1': stats['ave_diff_logits_L1'],
-            #             'ave_diff_logits_L2': stats['ave_diff_logits_L2'],
-            #             'ave_diff_preds': stats['ave_diff_preds'],
-            #         }
-            #     # Write to the CSV file for this dataset
-            #     csv_writers[name].writerow(row)
-
-            
-            # Calculate output-output mutual information
-            mi_mat = mi_stats['output-output']['mutual_info']
-            nmi_mat = mi_stats['output-output']['normalized_mutual_info']
-            for i in range(mi_mat.shape[0]):
-                for j in range(i, mi_mat.shape[1]):
-                    stats_oo.append({
-                        'iter': iter_num,
-                        'i': i,
-                        'j': j,
-                        'mi': mi_mat[i, j].item(),
-                        'nmi': nmi_mat[i, j].item()
-                    })
-
-            # also calculate input-output mutual information
-            mi_mat_io = mi_stats['input-output']['mutual_info']
-            nmi_mat_io = mi_stats['input-output']['normalized_mutual_info']
-            for i in range(mi_mat_io.shape[0]):
-                for j in range(mi_mat_io.shape[1]):
-                    stats_io.append({
-                        'iter': iter_num,
-                        'i': i,
-                        'j': j,
-                        'mi': mi_mat_io[i, j].item(),
-                        'nmi': nmi_mat_io[i, j].item()
-                    })
-
-            # **NOW write out the two MI CSVs immediately:**
-            stats_oo_df = pd.DataFrame(stats_oo)
-            stats_oo_df.to_csv(os.path.join(result_dir, 'output_output_mi.csv'), index=False)
-
-            stats_io_df = pd.DataFrame(stats_io)
-            stats_io_df.to_csv(os.path.join(result_dir, 'input_output_mi.csv'), index=False)
-
-            model.train()
+    # REMOVED: Do additional statistical measurements 
+    #if mi_measurement:
+    #    if iter_num in mi_measure_iters:
+    #        model.eval()
+    #        
+    #        with torch.no_grad():
+    #            # eval_res = eval_model(model, meta, stats_measurement_dataset_list, digits_per_num=num_digit, batch_size=test_batch_size)
+    #            mi_stats = calc_model_dataset_mi(
+    #                model = model,
+    #                metadata = meta,
+    #                data = stats_measurement_data,
+    #                digits_per_num = num_digit,
+    #                batch_size = test_batch_size,
+    #                drop_leading_digit = drop_leading_digit
+    #            )
+    #
+    #        # for name, stats in eval_res.items():
+    #        #     if name == "model_embeddings":
+    #        #         continue
+    #        #     if name == 'base':
+    #        #         row = {
+    #        #             'iter': iter_num,
+    #        #             'ave_correct_probs': stats['ave_correct_probs'],
+    #        #             'ave_correct_preds': stats['ave_correct_preds'],
+    #        #         }
+    #        #     else:
+    #        #         row = {
+    #        #             'iter': iter_num,
+    #        #             'ave_correct_probs': stats['ave_correct_probs'],
+    #        #             'ave_correct_preds': stats['ave_correct_preds'],
+    #        #             'ave_diff_probs_L1': stats['ave_diff_probs_L1'],
+    #        #             'ave_diff_probs_L2': stats['ave_diff_probs_L2'],
+    #        #             'ave_diff_probs_kl': stats['ave_diff_probs_kl'],
+    #        #             'ave_diff_logits_L1': stats['ave_diff_logits_L1'],
+    #        #             'ave_diff_logits_L2': stats['ave_diff_logits_L2'],
+    #        #             'ave_diff_preds': stats['ave_diff_preds'],
+    #        #         }
+    #        #     # Write to the CSV file for this dataset
+    #        #     csv_writers[name].writerow(row)
+    #
+    #        
+    #        # Calculate output-output mutual information
+    #        mi_mat = mi_stats['output-output']['mutual_info']
+    #        nmi_mat = mi_stats['output-output']['normalized_mutual_info']
+    #        for i in range(mi_mat.shape[0]):
+    #            for j in range(i, mi_mat.shape[1]):
+    #                stats_oo.append({
+    #                    'iter': iter_num,
+    #                    'i': i,
+    #                    'j': j,
+    #                    'mi': mi_mat[i, j].item(),
+    #                    'nmi': nmi_mat[i, j].item()
+    #                })
+    #
+    #        # also calculate input-output mutual information
+    #        mi_mat_io = mi_stats['input-output']['mutual_info']
+    #        nmi_mat_io = mi_stats['input-output']['normalized_mutual_info']
+    #        for i in range(mi_mat_io.shape[0]):
+    #            for j in range(mi_mat_io.shape[1]):
+    #                stats_io.append({
+    #                    'iter': iter_num,
+    #                    'i': i,
+    #                    'j': j,
+    #                    'mi': mi_mat_io[i, j].item(),
+    #                    'nmi': nmi_mat_io[i, j].item()
+    #                })
+    #
+    #        # **NOW write out the two MI CSVs immediately:**
+    #        stats_oo_df = pd.DataFrame(stats_oo)
+    #        stats_oo_df.to_csv(os.path.join(result_dir, 'output_output_mi.csv'), index=False)
+    #
+    #        stats_io_df = pd.DataFrame(stats_io)
+    #        stats_io_df.to_csv(os.path.join(result_dir, 'input_output_mi.csv'), index=False)
+    #
+    #        model.train()
         
     # Evaluation
     if iter_num % eval_interval == 0 or (more_early_eval1 and iter_num <= early_eval_border1 and iter_num % early_eval_interval1 == 0) or (more_early_eval2 and iter_num <= early_eval_border2 and iter_num % early_eval_interval2 == 0):
@@ -824,7 +841,34 @@ while iter_num < max_iters:
             
             # Add train accuracy to wandb_dict
             wandb_dict["train/accuracy"] = train_accuracy
-        
+
+            #### ADDED
+            if mi_measurement:
+                if iter_num == 0:
+                    mi_record_dict = {}
+                model.eval()
+                with torch.no_grad():
+                    mi_stats = calc_model_dataset_mi_v2(
+                        model = model,
+                        meta = meta,
+                        lines = mi_lines,
+                        xyz_mi_list = xyz_mi_list,
+                        reverse = reverse,
+                        batch_size = test_batch_size,
+                        padding_token = train_dataset.pad_id
+                    )    
+                mi_record_dict[f"iter_{iter_num}"] = mi_stats
+                wandb_dict["mi/units"] = mi_stats[0][2][0]
+                wandb_dict["mi/tens"] = mi_stats[1][2][0]
+                wandb_dict["mi/hundreds"] = mi_stats[2][2][0]
+                wandb_dict["mi/thousands"] = mi_stats[3][0][0]
+                wandb_dict["mi/units-base"] = xyz_mi_list[0]['mi'][2][0]
+                wandb_dict["mi/tens-base"] = xyz_mi_list[1]['mi'][2][0]
+                wandb_dict["mi/hundreds-base"] = xyz_mi_list[2]['mi'][2][0]
+                wandb_dict["mi/thousands-base"] = xyz_mi_list[3]['mi'][0][0]
+                model.train()
+            #### End of ADDED
+      
         # Update and save basic metrics
         result_dict['iter'].append(iter_num)
         result_dict['train_loss'].append(losses['train'].item())
