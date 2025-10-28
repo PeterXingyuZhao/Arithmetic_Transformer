@@ -268,9 +268,9 @@ def set_seed(seed):
     np.random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     # to make sure GPU runs are deterministic even if they are slower set this to True
-    torch.backends.cudnn.deterministic = True  ## CHANGED
+    torch.backends.cudnn.deterministic = True
     # warning: this causes the code to vary across runs
-    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.benchmark = False
     print("Seeded everything: {}".format(seed))
 
 if min_lr == None:
@@ -279,13 +279,13 @@ master_process = True
 seed_offset = 0
 if master_process:
   os.makedirs(out_dir, exist_ok=True)
-torch.manual_seed(1337 + seed_offset)
+torch.manual_seed(42 + seed_offset)
 torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
 torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
-torch.backends.cudnn.benchmark = True # cudnn auto-tuner
-torch.backends.cudnn.deterministic = True # cudnn auto-tuner ## CHANGED
+torch.backends.cudnn.benchmark = False # cudnn auto-tuner
+torch.backends.cudnn.deterministic = True # cudnn auto-tuner
 # this is probably overkill but seed everything again
-set_seed(1337 + seed_offset)
+set_seed(42 + seed_offset)
 
 device_type = 'cuda' if 'cuda' in device else 'cpu' # for later use in torch.autocast
 # note: float16 data type will automatically use a GradScaler
