@@ -408,25 +408,25 @@ meta_vocab_size = meta['vocab_size']
 print(f"Using vocabulary size: {meta_vocab_size}")
 
 
-if mi_measurement:
-    with open(stats_measurement_data_file_path, 'r', encoding='utf-8') as f:
-        lines = [line.rstrip() for line in f]
-
-    if drop_leading_digit:
-            S = num_digit
-    else:
-        S = num_digit + 1
-    # a simple way to parse test strings
-    padded_lines = [] # add 0 padding, remove $; an example padded_lines[6] is '932+084+230+349=5951'
-    for i in range(len(lines)):
-        numbers = re.split(r'[+=]', lines[i])
-        numbers[-1] = numbers[-1][:-1]
-        for k, number in enumerate(numbers[:-1]):
-            numbers[k] = '0' * (3-len(number)) + number
-        numbers[-1] = numbers[-1] + '0' * (S-len(numbers[-1]))
-        padded_lines.append("+".join(numbers[:-1]) + "=" + numbers[-1])
-
-    stats_measurement_data = torch.cat([encode_addition(padded_lines[i], meta).unsqueeze(0) for i in range(len(padded_lines))], dim=0)
+#if mi_measurement:
+#    with open(stats_measurement_data_file_path, 'r', encoding='utf-8') as f:
+#        lines = [line.rstrip() for line in f]
+#
+#    if drop_leading_digit:
+#            S = num_digit
+#    else:
+#        S = num_digit + 1
+#    # a simple way to parse test strings
+#    padded_lines = [] # add 0 padding, remove $; an example padded_lines[6] is '932+084+230+349=5951'
+#    for i in range(len(lines)):
+#        numbers = re.split(r'[+=]', lines[i])
+#        numbers[-1] = numbers[-1][:-1]
+#        for k, number in enumerate(numbers[:-1]):
+#            numbers[k] = '0' * (3-len(number)) + number
+#        numbers[-1] = numbers[-1] + '0' * (S-len(numbers[-1]))
+#        padded_lines.append("+".join(numbers[:-1]) + "=" + numbers[-1])
+#
+#    stats_measurement_data = torch.cat([encode_addition(padded_lines[i], meta).unsqueeze(0) for i in range(len(padded_lines))], dim=0)
 
 # # get 16 different datasets (including the base dataset) by randomizing input/output integers of the base dataset
 # stats_measurement_dataset_list = gen_randomized_datasets(
