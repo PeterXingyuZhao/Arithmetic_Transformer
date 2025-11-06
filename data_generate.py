@@ -2,7 +2,7 @@
 """
 data_generate.py
 
-Dispatches to individual generation scripts under /data_generation_script/individual_task_scripts/
+Dispatches to individual generation scripts under /data_generation_script/individual_task_scripts/.
 
 Usage:
     python data_generate.py --task <task> --num_operands <n> --experiment_name <name> \
@@ -45,9 +45,9 @@ TASK_MAP = {
         "generate_reverse": True,
     },
     "multiplication": {
-        "file": os.path.join("data_generation_script", "individual_task_scripts", "multiplication", "multiplication_gen.py"),
+        "file": os.path.join("data_generation_script", "individual_task_scripts", "multiplication", "multiplication_gen_v2.py"),
         # multiplication_gen.py now accepts --num_operands
-        "accepts_num_operands": True,
+        "accepts_num_operands": False,
         "generate_reverse": True,
     },
     "sorting": {
@@ -131,6 +131,55 @@ def main():
         default=False,
         help="Whether to run reverse_results.py at the end. Accepts True/False (case-insensitive).",
     )
+    parser.add_argument(
+        "--a_probabilities",
+        "--a_length_probs",
+        dest="a_probabilities",
+        type=str,
+        default=None,
+        help=(
+            "Comma-separated probabilities for operand 'a' digit lengths (multiplication task only). "
+            "Index 0 corresponds to 1-digit numbers, index 1 to 2-digit numbers, etc."
+        ),
+    )
+    parser.add_argument(
+        "--b_probabilities",
+        "--b_length_probs",
+        dest="b_probabilities",
+        type=str,
+        default=None,
+        help=(
+            "Comma-separated probabilities for operand 'b' digit lengths (multiplication task only). "
+            "Index 0 corresponds to 1-digit numbers, index 1 to 2-digit numbers, etc."
+        ),
+    )
+    parser.add_argument(
+        "--a_max_digits",
+        type=int,
+        default=None,
+        help=(
+            "Positive integer specifying the maximum digit length for operand 'a' when probabilities are not provided "
+            "(multiplication task only)."
+        ),
+    )
+    parser.add_argument(
+        "--b_max_digits",
+        type=int,
+        default=None,
+        help=(
+            "Positive integer specifying the maximum digit length for operand 'b' when probabilities are not provided "
+            "(multiplication task only)."
+        ),
+    )
+    parser.add_argument(
+        "--max_digits",
+        type=int,
+        default=None,
+        help=(
+            "Positive integer specifying the maximum digit length to apply to both operands when individual bounds are "
+            "omitted (multiplication task only)."
+        ),
+    )
 
 
     args = parser.parse_args()
@@ -194,6 +243,18 @@ def main():
         "--test_size", str(args.test_size),
         "--val_size", str(args.val_size),
     ]
+
+    if task == "multiplication":
+        if args.a_probabilities is not None:
+            gen_cmd += ["--a_probabilities", args.a_probabilities]
+        if args.b_probabilities is not None:
+            gen_cmd += ["--b_probabilities", args.b_probabilities]
+        if args.a_max_digits is not None:
+            gen_cmd += ["--a_max_digits", str(args.a_max_digits)]
+        if args.b_max_digits is not None:
+            gen_cmd += ["--b_max_digits", str(args.b_max_digits)]
+        if args.max_digits is not None:
+            gen_cmd += ["--max_digits", str(args.max_digits)]
 
 
     try:

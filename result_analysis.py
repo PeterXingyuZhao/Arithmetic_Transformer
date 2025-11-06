@@ -8,6 +8,34 @@ import matplotlib.pyplot as plt
 
 PRED_REGEX_DEFAULT = r"pred_iter_(\d+)"
 
+def _ordinal(n: int) -> str:
+    """Return the ordinal string ("0th", "1st", …) for a non-negative integer."""
+
+    if n < 0:
+        raise ValueError("Ordinal is only defined for non-negative integers in this context.")
+
+    # Handle the "teens" which always end in "th"
+    if 10 <= n % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def _place_names(count: int) -> List[str]:
+    """Generate a list of ordinal place names up to ``count`` digits."""
+
+    return [_ordinal(i) for i in range(count)]
+
+
+def _place_order_key(name: str) -> Tuple[int, str]:
+    """Key function to order ordinal place names numerically, fallback to lexical order."""
+
+    match = re.fullmatch(r"(\d+)(st|nd|rd|th)", name)
+    if match:
+        return int(match.group(1)), name
+    # Fallback: put any unrecognised names after numeric ones but keep deterministic order
+    return float("inf"), name
 
 def digit_error_tally(actuals, preds) -> Dict[str, int]:
     """
@@ -15,7 +43,7 @@ def digit_error_tally(actuals, preds) -> Dict[str, int]:
     IMPORTANT: determine the maximum width ONLY from the actuals column (so garbage/long model outputs
     won't increase the number of places we check). Predictions longer than the chosen width are
     truncated to the rightmost digits (so units/tens alignment is preserved).
-    Returns dict mapping place names (units, tens, ...) to error counts.
+    Returns dict mapping place names (0th, 1st, ...) to error counts.
     """
     str_actuals = []
     str_preds = []
@@ -42,11 +70,12 @@ def digit_error_tally(actuals, preds) -> Dict[str, int]:
         max_width = 1
     max_width = max(1, max_width)
 
-    base_places = ["units", "tens", "hundreds", "thousands",
-                   "ten-thousands", "hundred-thousands",
-                   "millions", "ten-millions", "hundred-millions"]
-    max_width = min(max_width, len(base_places))
-    place_names = base_places[:max_width]
+    #base_places = ["units", "tens", "hundreds", "thousands",
+    #               "ten-thousands", "hundred-thousands",
+    #               "millions", "ten-millions", "hundred-millions"]
+    #max_width = min(max_width, len(base_places))
+    #place_names = base_places[:max_width]
+    place_names = _place_names(max_width)
 
     counts = {place: 0 for place in place_names}
 
@@ -117,18 +146,20 @@ def analyze_csv(
         place_counts_over_iters[step] = stats
 
     # Build the union of all place names across iterations
-    base_places = ["units", "tens", "hundreds", "thousands",
-                   "ten-thousands", "hundred-thousands",
-                   "millions", "ten-millions", "hundred-millions"]
-
+    #base_places = ["units", "tens", "hundreds", "thousands",
+    #               "ten-thousands", "hundred-thousands",
+    #               "millions", "ten-millions", "hundred-millions"]
+    #
     all_places = set()
     for stats in place_counts_over_iters.values():
         all_places.update(stats.keys())
 
     # Order places by base_places ordering if possible, then append any unknown places (sorted)
-    ordered_places = [p for p in base_places if p in all_places]
-    remaining = sorted(list(all_places - set(ordered_places)))
-    ordered_places.extend(remaining)
+    #ordered_places = [p for p in base_places if p in all_places]
+    #remaining = sorted(list(all_places - set(ordered_places)))
+    #ordered_places.extend(remaining)
+    # Order places numerically based on their ordinal name; fallback to lexical order for unknown names
+    ordered_places = sorted(all_places, key=_place_order_key)
 
     # If something strange happened and ordered_places is empty, fall back to the first iteration's keys
     if not ordered_places:
@@ -139,7 +170,7 @@ def analyze_csv(
     series = {p: [place_counts_over_iters[it].get(p, 0) for it in iterations] for p in ordered_places}
 
     # plotting
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(30, 18))
     for p in ordered_places:
         plt.plot(iterations, series[p], label=f"{p} errors")
     plt.title("Digit-wise error count vs. training iteration")
