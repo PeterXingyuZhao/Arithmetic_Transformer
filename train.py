@@ -102,7 +102,7 @@ dtype = 'bfloat16' if torch.cuda.is_bf16_supported() else 'float16' # 'float32',
 compile = True # use PyTorch 2.0 to compile the model to be faster
 use_flash = True
 data_type = 'binary' # 'binary' by default, can be 'text'
-operator = '+' # can be '+', '-', '*', 'sin', 'sqrt'
+operator = '+' # can be '+', '-', '*'
 data_shuffle = True
 data_format = 'plain' # 'plain' or 'reverse' or 'algo_reasoning'
 vocabulary = 'all_ascii_chars' # can be 'all_ascii_chars' or 'numbers_only' or 'custom_input_data'
@@ -844,7 +844,7 @@ while iter_num < max_iters:
             wandb_dict["train/accuracy"] = train_accuracy
 
             #### ADDED
-            if mi_measurement:
+            if mi_measurement and operator == '+':
                 if iter_num == 0:
                     mi_record_dict = {}
                 model.eval()
