@@ -12,8 +12,8 @@ Usage examples:
     # first/second/third/fourth-digit match: compare only the k-th digit at each position
     python sorting_acc_comprehensive.py --csv data.csv --positions 1 2 3 4 --mode third --show
 
-    # only draw iterations up to 1000
-    python sorting_acc_comprehensive.py --csv data.csv --positions 1 2 3 4 --mode strict --max-iter 1000
+    # only draw iterations between 100 and 1000
+    python sorting_acc_comprehensive.py --csv data.csv --positions 1 2 3 4 --mode strict --min-iter 100 --max-iter 1000
 """
 from __future__ import annotations
 import re
@@ -76,15 +76,7 @@ def parse_iter_number(colname: str) -> int:
 
 def compute_accuracies_for_positions(df: pd.DataFrame, positions: List[int], mode: str = "strict") -> Dict[int, pd.DataFrame]:
     """
-    mode: "strict" -> numeric equality (int)
-          "length" -> digit-length match (string length of digits)
-          "first"/"second"/"third"/"fourth" -> kth-digit character match (from digit-only token, preserves leading zeros)
-    Returns dict mapping pos -> DataFrame with columns ['iter','accuracy','matches','total','col'].
-    Additionally computes pos==0 => joint-digit accuracy (the "joint-digit accuracy" metric described).
-    For 'strict' mode the joint-digit accuracy equals original whole-result exact-match accuracy.
-    The joint metric checks that ALL requested positions that actually have the k-th digit
-    match simultaneously. An example is included in the denominator if at least one requested
-    position has the required k-th digit (otherwise it's skipped).
+    (function body unchanged)
     """
     if 'actual' not in df.columns:
         raise ValueError("CSV must contain an 'actual' column with the true tokens.")
@@ -327,18 +319,26 @@ def compute_accuracies_for_positions(df: pd.DataFrame, positions: List[int], mod
     return results_by_pos
 
 def plot_multi_positions(accs_by_pos: Dict[int, pd.DataFrame], outpath: str, show_plot: bool = False,
-                         mode: str = "strict", positions: List[int] = None, max_iter: Optional[int] = None):
-    """Plot per-position and joint curves. If max_iter is provided, only plot iterations <= max_iter."""
+                         mode: str = "strict", positions: List[int] = None, max_iter: Optional[int] = None,
+                         min_iter: Optional[int] = None):
+    """Plot per-position and joint curves. If max_iter/min_iter are provided, only plot iterations
+    in the inclusive range [min_iter, max_iter]."""
     plt.figure(figsize=(10, 5.5))
     ax = plt.gca()
 
+    # sanity check: min/max range
+    if (min_iter is not None) and (max_iter is not None) and (min_iter > max_iter):
+        print(f"Warning: --min-iter ({min_iter}) > --max-iter ({max_iter}). Nothing will be plotted.")
+        return
+
     any_plotted = False
     for pos, dfp in sorted(accs_by_pos.items(), key=lambda kv: kv[0]):
-        # filter by max_iter if provided
+        # filter by min_iter / max_iter if provided
+        df_plot = dfp
+        if min_iter is not None:
+            df_plot = df_plot[df_plot['iter'] >= min_iter]
         if max_iter is not None:
-            df_plot = dfp[dfp['iter'] <= max_iter]
-        else:
-            df_plot = dfp
+            df_plot = df_plot[df_plot['iter'] <= max_iter]
 
         if df_plot.empty:
             # nothing to plot for this series within the requested range
@@ -368,7 +368,7 @@ def plot_multi_positions(accs_by_pos: Dict[int, pd.DataFrame], outpath: str, sho
             ax.plot(iters, accuracies, marker='o', linestyle='-', label=label)
 
     if not any_plotted:
-        print("Warning: no iterations to plot within the requested max_iter range.")
+        print("Warning: no iterations to plot within the requested min/max iteration range.")
         # still create empty plot with labels
     ax.set_ylim(-2, 102)
     ax.set_xlabel("Iteration")
@@ -382,8 +382,13 @@ def plot_multi_positions(accs_by_pos: Dict[int, pd.DataFrame], outpath: str, sho
     ax.set_title(title)
     ax.grid(True, linestyle='--', alpha=0.5)
     ax.legend(title="Metric", loc="best")
-    if max_iter is not None:
-        ax.set_xlim(left=0, right=max_iter)
+    # set x-limits if requested
+    if (min_iter is not None) or (max_iter is not None):
+        left = min_iter if min_iter is not None else 0
+        if max_iter is not None:
+            ax.set_xlim(left=left, right=max_iter)
+        else:
+            ax.set_xlim(left=left)
     plt.tight_layout()
     plt.savefig(outpath, dpi=150)
     print(f"Saved plot to {outpath}")
@@ -415,6 +420,8 @@ def main():
                         help="Accuracy mode: strict (numeric equality), length (digit-length match), or first/second/third/fourth (k-th digit match)")
     parser.add_argument("--out", "-o", default="pos_accuracy.png", help="Output image path (PNG)")
     parser.add_argument("--show", action="store_true", help="Show plot interactively")
+    parser.add_argument("--min-iter", type=int, default=None,
+                        help="Minimum iteration value to draw on the x-axis (inclusive). If omitted, start from iteration 0 or smallest plotted iteration.")
     parser.add_argument("--max-iter", type=int, default=None,
                         help="Maximum iteration value to draw on the x-axis (inclusive). If omitted, draw all iterations collected.")
     args = parser.parse_args()
@@ -450,7 +457,8 @@ def main():
         acc_pct = (row['accuracy'] * 100) if pd.notna(row['accuracy']) else float('nan')
         print(f" {int(row['iter']):8d} | {int(row['matches']):7d}/{int(row['total']):6d} | {acc_pct:8.3f}")
 
-    plot_multi_positions(accs_by_pos, args.out, show_plot=args.show, mode=args.mode, positions=positions, max_iter=args.max_iter)
+    plot_multi_positions(accs_by_pos, args.out, show_plot=args.show, mode=args.mode, positions=positions,
+                         max_iter=args.max_iter, min_iter=args.min_iter)
 
 if __name__ == "__main__":
     main()

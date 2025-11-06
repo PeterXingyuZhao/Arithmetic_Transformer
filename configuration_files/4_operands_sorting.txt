@@ -43,8 +43,8 @@ zero_pad = False
 learning_rate = 1e-3
 
 # to edit: the number of training iterations
-max_iters = 5000
-lr_decay_iters = 5000 # make equal to max_iters usually (300000)
+max_iters = 10000
+lr_decay_iters = 10000 # make equal to max_iters
 
 beta1 = 0.9
 beta2 = 0.98
@@ -55,7 +55,7 @@ device='cuda:0'
 
 # to edit: the output directory; Path is relative to the project's main directory. 
 # For example, the project's main directory might be "/content/drive/MyDrive/addition/"
-out_dir = 'results/4_operands_sorting_balanced_digit/digitwise_test_out'
+out_dir = 'results/4_operands_sorting_balanced_digit/conflicting_digit_test_out'
 
 # to edit: data directory; Path is relative to the project's main directory. 
 data_dir = 'data/4_operands_sorting_balanced_digit/'
