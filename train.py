@@ -39,6 +39,8 @@ eval_only = False # if True, script exits right after the first eval
 always_save_checkpoint = True # if True, always save a checkpoint after each eval
 init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
 
+seed = 1337 # 1337
+
 # wandb logging
 wandb_entity = 'ssdd'
 wandb_log = False # disabled by default
@@ -280,16 +282,16 @@ def set_seed(seed):
 if min_lr == None:
     min_lr = learning_rate/10
 master_process = True
-seed_offset = 0
+
 if master_process:
   os.makedirs(out_dir, exist_ok=True)
-#torch.manual_seed(42 + seed_offset)
+#torch.manual_seed(42)
 #torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
 #torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
 #torch.backends.cudnn.benchmark = False # cudnn auto-tuner
 #torch.backends.cudnn.deterministic = True # cudnn auto-tuner
 # this is probably overkill but seed everything again
-set_seed(1337 + seed_offset)
+set_seed(seed)
 
 device_type = 'cuda' if 'cuda' in device else 'cpu' # for later use in torch.autocast
 # note: float16 data type will automatically use a GradScaler

@@ -43,8 +43,8 @@ zero_pad = False
 learning_rate = 1e-3
 
 # to edit: the number of training iterations
-max_iters = 200000 # for four operands addition, recommend >= 200000
-lr_decay_iters = 200000 # make equal to max_iters
+max_iters = 400000 # for four operands addition, recommend >= 200000
+lr_decay_iters = 400000 # make equal to max_iters
 
 beta1 = 0.9
 beta2 = 0.98
