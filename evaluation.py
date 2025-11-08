@@ -149,7 +149,7 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
     device = config['device']
     max_new_tokens = config['max_new_tokens'] if 'max_new_tokens' in config.keys() else num_digit+2
     temperature = config['temperature'] if 'temperature' in config.keys() else 0.8
-    top_k = config['top_k'] if 'top_k' in config.keys() else 200
+    top_k = config['top_k'] if 'top_k' in config.keys() else 1 # changed from 200 to 1 for deterministic output (greedy decoding)
 
     if add_space:
         max_new_tokens = 2 * num_digit + 3

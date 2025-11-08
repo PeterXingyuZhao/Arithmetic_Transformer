@@ -7,7 +7,7 @@ wandb_log = True # override via command line if you like
 wandb_project = '2_op_addition'
 
 # to edit: wandb run name
-wandb_run_name = '2_operands_0_to_999_uniform_gold_by_reading_reverse'
+wandb_run_name = '2_operands_0_to_999_uniform_reverse'
 
 # baby GPT model :)
 n_layer = 6
