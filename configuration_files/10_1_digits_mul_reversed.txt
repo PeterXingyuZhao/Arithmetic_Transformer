@@ -36,9 +36,6 @@ max_new_tokens = 14
 
 drop_leading_digit = False
 
-# whether need zero‐padding
-zero_pad = False
-
 # ===== Learning Rate Policy ===== #
 learning_rate = 1e-3
 

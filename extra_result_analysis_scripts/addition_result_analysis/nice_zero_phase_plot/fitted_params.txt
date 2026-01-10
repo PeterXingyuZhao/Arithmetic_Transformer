@@ -1,0 +1,18 @@
+counts_column	zero_phase
+mu	3.8270234329350887
+sigma	333.39755216106704
+total_count	9926
+
+# Goodness-of-fit metrics
+chi2	661.474
+chi2_df	1599
+chi2_pvalue	1
+rmse	1.59261
+mae	1.20172
+pearson_r	0.91104
+r_squared	0.799954
+poisson_ll_omit_const	9837.01
+AIC_omit_const	-19670
+BIC_omit_const	-19659.3
+valid_bins	1601
+total_count	9926

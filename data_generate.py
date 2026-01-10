@@ -51,7 +51,7 @@ TASK_MAP = {
         "generate_reverse": True,
     },
     "sorting": {
-        "file": os.path.join("data_generation_script", "individual_task_scripts", "sorting", "sorting_gen.py"),
+        "file": os.path.join("data_generation_script", "individual_task_scripts", "sorting", "doubly_bal_gen.py"),
         # set True/False depending on your sorting_gen implementation
         "accepts_num_operands": False,
         "generate_reverse": False,

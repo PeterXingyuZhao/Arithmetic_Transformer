@@ -10,8 +10,12 @@ Extended version that computes digit-match errors for three test CSVs:
 Produces one PNG per test and a combined PNG with all three plots.
 
 Usage:
-    python skewed_error.py --csv1 test1.csv --csv2 test2.csv --csv3 test3.csv \
-        --outdir ./out --show
+    python leading_k_digit_errors.py --csv1 test1.csv --csv2 test2.csv --csv3 test3.csv \
+        --outdir ./out --show --titles "Title 1" "Title 2" "Title 3" \
+        --ylabels "Y label 1" "Y label 2" "Y label 3"
+
+Disable titles entirely:
+    python leading_k_digit_errors.py ... --no-titles
 
 CSV expectations:
  - Column 'actual' containing the ground-truth sorted line (e.g. "2774,524,996,875=524,875,996,2774$")
@@ -120,15 +124,18 @@ def compute_ever_exhibited_for_k(df: pd.DataFrame, k: int) -> Tuple[int,int,floa
     prop = ever_count / total_examples if total_examples > 0 else float('nan')
     return ever_count, total_examples, prop
 
-def plot_rates(df_rates: pd.DataFrame, k: int, title: str, outpath: str, ever_info: Tuple[int,int,float], show: bool=False):
+def plot_rates(df_rates: pd.DataFrame, k: int, title: Optional[str], outpath: str, ever_info: Tuple[int,int,float], show: bool=False, y_label: Optional[str]=None):
     iters = df_rates['iter'].values
     rates = df_rates['match_rate_all'].values * 100
     plt.figure(figsize=(8,4))
     plt.plot(iters, rates, marker='o', linestyle='-')
     plt.ylim(-2, 102)
     plt.xlabel("Iteration")
-    plt.ylabel(f"Match rate (%) (leading-{k} of first_pred == leading-{k} of actual 4-digit)")
-    plt.title(title)
+    ylabel_text = y_label if y_label is not None else f"Match rate (%) (leading-{k} of first_pred == leading-{k} of actual 4-digit)"
+    plt.ylabel(ylabel_text)
+    # Only set title when provided (and not explicitly empty)
+    if title:
+        plt.title(title)
     plt.grid(True, linestyle='--', alpha=0.4)
 
     for x, y, matches in zip(df_rates['iter'], rates, df_rates['matches']):
@@ -146,7 +153,7 @@ def plot_rates(df_rates: pd.DataFrame, k: int, title: str, outpath: str, ever_in
         plt.show()
     plt.close()
 
-def create_combined_plot(all_rate_dfs: Dict[str, pd.DataFrame], titles: Dict[str,str], combined_outpath: str, ever_infos: Dict[str,Tuple[int,int,float]], show: bool=False):
+def create_combined_plot(all_rate_dfs: Dict[str, pd.DataFrame], titles: Dict[str,Optional[str]], combined_outpath: str, ever_infos: Dict[str,Tuple[int,int,float]], ylabels: Dict[str,Optional[str]], show: bool=False):
     fig, axes = plt.subplots(1, len(all_rate_dfs), figsize=(5*len(all_rate_dfs), 4), sharey=False)
     if len(all_rate_dfs) == 1:
         axes = [axes]
@@ -155,8 +162,15 @@ def create_combined_plot(all_rate_dfs: Dict[str, pd.DataFrame], titles: Dict[str
         rates = df_rates['match_rate_all'].values * 100
         ax.plot(iters, rates, marker='o', linestyle='-')
         ax.set_xlabel("Iteration")
-        ax.set_ylabel("Match rate (%)")
-        ax.set_title(titles[key])
+        ylabel_text = ylabels.get(key)
+        if ylabel_text is None:
+            ax.set_ylabel("Match rate (%)")
+        else:
+            # if user passed empty string intentionally, still set it; but we normally use None to mean default
+            ax.set_ylabel(ylabel_text)
+        title_text = titles.get(key)
+        if title_text:
+            ax.set_title(title_text)
         ax.grid(True, linestyle='--', alpha=0.4)
         for x, y, matches in zip(df_rates['iter'], rates, df_rates['matches']):
             ax.annotate(f"{matches}", (x,y), textcoords="offset points", xytext=(0,7), ha='center', fontsize=8)
@@ -173,7 +187,7 @@ def create_combined_plot(all_rate_dfs: Dict[str, pd.DataFrame], titles: Dict[str
         plt.show()
     plt.close(fig)
 
-def process_one(csvpath: str, k: int, label: str, outdir: str, show: bool=False):
+def process_one(csvpath: str, k: int, label: str, title: Optional[str], y_label: Optional[str], outdir: str, show: bool=False):
     df = pd.read_csv(csvpath, dtype=str, keep_default_na=False, na_values=[''])
     if 'actual' not in df.columns:
         raise SystemExit(f"CSV {csvpath} must have an 'actual' column.")
@@ -189,7 +203,7 @@ def process_one(csvpath: str, k: int, label: str, outdir: str, show: bool=False)
     print(f"Ever-exhibited match across ALL iterations: {ever_count}/{total_examples} = {prop*100:.3f}%")
 
     outpath = os.path.join(outdir, f"{label}_k{k}_error.png")
-    plot_rates(rates_df, k, f"{label}  (leading-{k} match)", outpath, ever_info, show=show)
+    plot_rates(rates_df, k, title, outpath, ever_info, show=show, y_label=y_label)
     return rates_df, ever_info
 
 def main():
@@ -199,29 +213,59 @@ def main():
     parser.add_argument("--csv3", required=True, help="CSV for test3 (k=3)")
     parser.add_argument("--outdir", default=".", help="Output directory for PNGs")
     parser.add_argument("--show", action="store_true", help="Show plots interactively")
+    parser.add_argument("--titles", nargs=3, metavar=('T1','T2','T3'),
+                        help="Optional titles for the three plots (in order: csv1 csv2 csv3)")
+    parser.add_argument("--ylabels", nargs=3, metavar=('Y1','Y2','Y3'),
+                        help="Optional y-axis labels for the three plots (in order: csv1 csv2 csv3)")
+    parser.add_argument("--no-titles", dest="no_titles", action="store_true",
+                        help="Disable titles on all plots (overrides --titles)")
     args = parser.parse_args()
 
     os.makedirs(args.outdir, exist_ok=True)
 
-    # test-specific k values and labels (test1 now uses k=1)
-    specs = [
-        (args.csv1, 1, "test1"),   # changed: single highest digit
-        (args.csv2, 2, "test2"),   # tens/hundreds relationship check (as before)
-        (args.csv3, 3, "test3"),   # tens-place of 4-digit used as 3rd digit check (as before)
+    # defaults for titles and ylabels if not provided
+    default_titles = [
+        "test1 (leading-1 match)",
+        "test2 (leading-2 match)",
+        "test3 (leading-3 match)",
+    ]
+    default_ylabels = [
+        "Match rate (%) (leading-1)",
+        "Match rate (%) (leading-2)",
+        "Match rate (%) (leading-3)",
     ]
 
-    all_rate_dfs = {}
-    titles = {}
-    ever_infos = {}
-    for csvpath, k, label in specs:
-        rates_df, ever_info = process_one(csvpath, k, label, args.outdir, show=args.show)
+    # choose titles: priority -> --no-titles (None), --titles (provided list), defaults
+    if args.no_titles:
+        provided_titles: List[Optional[str]] = [None, None, None]
+    else:
+        if args.titles is not None:
+            provided_titles = list(args.titles)
+        else:
+            provided_titles = default_titles
+
+    provided_ylabels = list(args.ylabels) if args.ylabels is not None else default_ylabels
+
+    specs = [
+        (args.csv1, 1, "test1", provided_titles[0], provided_ylabels[0]),
+        (args.csv2, 2, "test2", provided_titles[1], provided_ylabels[1]),
+        (args.csv3, 3, "test3", provided_titles[2], provided_ylabels[2]),
+    ]
+
+    all_rate_dfs: Dict[str, pd.DataFrame] = {}
+    titles: Dict[str, Optional[str]] = {}
+    ever_infos: Dict[str, Tuple[int,int,float]] = {}
+    ylabels_map: Dict[str, Optional[str]] = {}
+    for csvpath, k, label, title, y_label in specs:
+        rates_df, ever_info = process_one(csvpath, k, label, title, y_label, args.outdir, show=args.show)
         all_rate_dfs[label] = rates_df
-        titles[label] = f"{label} (leading-{k} match)"
+        titles[label] = title
         ever_infos[label] = ever_info
+        ylabels_map[label] = y_label
 
     # combined plot
     combined_outpath = os.path.join(args.outdir, "combined_three_tests.png")
-    create_combined_plot(all_rate_dfs, titles, combined_outpath, ever_infos, show=args.show)
+    create_combined_plot(all_rate_dfs, titles, combined_outpath, ever_infos, ylabels_map, show=args.show)
 
 if __name__ == "__main__":
     main()

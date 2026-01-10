@@ -1,0 +1,18 @@
+counts_column	second_phase
+mu	-0.23960414654098244
+sigma	3.246527708635629
+total_count	9999
+
+# Goodness-of-fit metrics
+chi2	450.411
+chi2_df	39
+chi2_pvalue	0
+rmse	72.4982
+mae	39.8921
+pearson_r	0.982563
+r_squared	0.963342
+poisson_ll_omit_const	56135.8
+AIC_omit_const	-112268
+BIC_omit_const	-112264
+valid_bins	41
+total_count	9999

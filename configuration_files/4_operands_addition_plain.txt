@@ -4,10 +4,10 @@ eval_iters = 1
 always_save_checkpoint = True
 
 wandb_log = True # override via command line if you like
-wandb_project = 'addition'
+wandb_project = '4_op_addition'
 
 # to edit: wandb run name
-wandb_run_name = '4_operands_0_to_999_uniform_plain'
+wandb_run_name = '4_operands_0_to_999_uniform_plain_greedy'
 
 # baby GPT model :)
 n_layer = 6
@@ -18,7 +18,6 @@ dropout = 0.2
 # to edit: 'plain' or 'reverse' or 'scratchpad' or 'max' or 'sorting'
 data_format='plain'
 operator='+'
-dataset = 'bal'
 batch_size = 512
 block_size = 32 # context of up to 256 previous characters
 
@@ -36,15 +35,12 @@ max_new_tokens = 5
 
 drop_leading_digit = False
 
-# whether need zero‐padding
-zero_pad = False
-
 # ===== Learning Rate Policy ===== #
 learning_rate = 1e-3
 
 # to edit: the number of training iterations
-max_iters = 200000 # for four operands addition, recommend >= 200000
-lr_decay_iters = 200000 # make equal to max_iters
+max_iters = 800000 # for four operands addition, recommend >= 200000
+lr_decay_iters = 800000 # make equal to max_iters
 
 beta1 = 0.9
 beta2 = 0.98
@@ -55,7 +51,7 @@ device='cuda:0'
 
 # to edit: the output directory; Path is relative to the project's main directory. 
 # For example, the project's main directory might be "/content/drive/MyDrive/addition/"
-out_dir = 'results/4_operands_0_to_999_uniform/plain_out'
+out_dir = 'results/4_operands_0_to_999_uniform/plain_out_greedy'
 
 # to edit: data directory; Path is relative to the project's main directory. 
 data_dir = 'data/4_operands_0_to_999_uniform/'
@@ -79,3 +75,6 @@ main_test_name = "test"
 
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
 mode = "read_gold_as_str"
+
+# to edit: Can be 'units', 'tens', 'hundreds', 'thousands', or None
+randomize = None

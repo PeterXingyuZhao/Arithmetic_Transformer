@@ -109,7 +109,7 @@ class GPTConfig:
 
 
 class GPT(nn.Module):
-  def __init__(self,config, pad_id):
+  def __init__(self,config, pad_id=None):
     super().__init__()
     assert config.vocab_size is not None
     assert config.block_size is not None
@@ -128,6 +128,11 @@ class GPT(nn.Module):
 
     # init all weights
     self.apply(self._init_weights)
+
+    # if pad_id provided, zero the pad row so it starts truly zeroed
+    if self.pad_id is not None:
+      with torch.no_grad():
+        self.transformer.wte.weight[self.pad_id].zero_()
 
     for pn, p in self.named_parameters():
       if pn.endswith('c_proj.weight'):
@@ -170,7 +175,10 @@ class GPT(nn.Module):
       logits = self.lm_head(x)
       logits = logits.reshape(-1, logits.size(-1))   # (B*L, V)
       targets = targets.reshape(-1)                  # (B*L,)
-      loss = F.cross_entropy(logits, targets, ignore_index=self.pad_id)
+      
+      # only set ignore_index to pad_id when pad_id is provided; else use default -100
+      ignore_idx = self.pad_id if self.pad_id is not None else -100
+      loss = F.cross_entropy(logits, targets, ignore_index=ignore_idx)
     else:
       logits = self.lm_head(x[:,[-1],:])
       loss = None
@@ -219,14 +227,51 @@ class GPT(nn.Module):
   def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None):
     for _ in range(max_new_tokens):
       idx_cond = idx if idx.size(1) <=self.config.block_size else idx[:, -self.config.block_size:]
+      # inside generate loop, right after getting logits from model:
       logits, _ = self(idx_cond)
+      logits = logits[:, -1, :]  # shape (B, V)
 
-      logits = logits[:,-1,:] / temperature
+      # Greedy detection (treat temp==0.0 or top_k==1 as greedy)
+      is_greedy = ((temperature is not None and float(temperature) == 0.0)
+                  or (top_k is not None and int(top_k) == 1))
 
-      if top_k is not None:
-        v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-        logits[logits < v[:,[-1]]] = -float('Inf')
-      probs = F.softmax(logits, dim=-1)
-      idx_next = torch.multinomial(probs, num_samples=1)
+      if is_greedy:
+          # deterministic greedy argmax — NO division by temperature
+          idx_next = torch.argmax(logits, dim=-1, keepdim=True)
+      else:
+          # safe temperature handling (avoid division by zero)
+          temp = max(float(temperature), 1e-8)
+          logits = logits / temp
+
+          # optional top-k pruning
+          if top_k is not None and 0 < int(top_k) < logits.size(-1):
+              topk_vals, _ = torch.topk(logits, k=int(top_k), dim=-1)
+              min_topk = topk_vals[:, -1].unsqueeze(-1)
+              logits = torch.where(logits < min_topk, torch.full_like(logits, -1e9), logits)
+
+          # probabilities and stable sampling
+          probs = F.softmax(logits, dim=-1)
+
+          # sanitize and renormalize (keep your current safety logic)
+          if (probs < 0).any():
+              probs = torch.clamp(probs, min=0.0)
+          row_sums = probs.sum(dim=-1, keepdim=True)
+          bad_rows = (row_sums <= 0) | torch.isnan(row_sums)
+          if bad_rows.any():
+              greedy_idx = torch.argmax(logits, dim=-1)
+              one_hot = torch.zeros_like(probs)
+              one_hot.scatter_(1, greedy_idx.unsqueeze(-1), 1.0)
+              probs = torch.where(bad_rows.unsqueeze(-1), one_hot, probs)
+              row_sums = probs.sum(dim=-1, keepdim=True)
+          probs = probs / row_sums.clamp(min=1e-12)
+
+          if torch.isnan(probs).any() or torch.isinf(probs).any():
+              probs = torch.nan_to_num(probs, nan=0.0, posinf=0.0, neginf=0.0)
+              probs = probs / probs.sum(dim=-1, keepdim=True).clamp(min=1e-12)
+
+          idx_next = torch.multinomial(probs, num_samples=1)
+
+      # append next token
       idx = torch.cat((idx, idx_next), dim=1)
+
     return idx

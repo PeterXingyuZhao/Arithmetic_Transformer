@@ -1,7 +1,7 @@
 # result_analysis.py
 import re
 from pathlib import Path
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Union, Optional
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -94,14 +94,14 @@ def digit_error_tally(actuals, preds) -> Dict[str, int]:
 
 
 def analyze_csv(
-    csv_path: str | Path,
+    csv_path: Union[str, Path],
     step_size: int = 5,
     offset: int = 0,
     max_steps: int = 800000,
     actual_col: str = "actual",
     pred_regex: str = PRED_REGEX_DEFAULT,
     save_fig: bool = True,
-    fig_path: str | None = None,
+    fig_path: Optional[Union[str, Path]] = None,
     save_counts_csv: bool = False,
 ) -> Tuple[pd.DataFrame, Dict[int, Dict[str, int]]]:
     """
@@ -119,7 +119,7 @@ def analyze_csv(
     df = pd.read_csv(csv_path)
 
     # find relevant pred columns
-    pred_cols: List[tuple[int, str]] = []
+    pred_cols: List[Tuple[int, str]] = []
     prog = re.compile(pred_regex)
     for col in df.columns:
         m = prog.fullmatch(col)

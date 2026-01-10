@@ -18,7 +18,6 @@ import wandb
 import torch.nn.functional as F
 import math
 
-from model import GPTConfig, GPT
 from main_utilities import *
 from evaluation import *
 from statistical_measurements import *
@@ -49,7 +48,6 @@ wandb_run_name = 'gpt2' # 'run' + str(time.time())
 exp_name = 'default_exp_name'
 
 # data
-dataset = 'bal'
 gradient_accumulation_steps = 1 # used to simulate larger batch sizes
 test_batch_size = 128
 batch_size = 12 # if gradient_accumulation_steps > 1, this is the micro-batch size
@@ -65,12 +63,17 @@ num_digit = 3
 max_new_tokens = 5
 binary = False
 
+# decoding / generation defaults
+top_k = 200          # default non-greedy top_k
+temperature = 0.8    # default sampling temperature
+greedy = False       # set to True by CLI to force greedy decoding (top_k=1, temperature=0)
+
+
 eval_addition = False # if True compute test accuracy of "a+b="
 
 eval_other = False # use this to evaluate other operations (ex. train on operator '-' but evaluate on other_operator '+')
 other_operator = '+'
 eval_addition_train = False
-zero_pad = False
 algo_reason = False
 add_space = False
 
@@ -120,6 +123,7 @@ use_lora = False # use lora (from minLoRA)
 print_interval = 2  # if we're using gpt-2 model, I want to see it prompted on text
 
 mode = "compute_gold"  # Mode for evaluation: "compute_gold" or "read_gold_as_str"
+randomize = None  # Can be 'units', 'tens', 'hundreds', 'thousands', or None
 
 more_early_eval1 = False # if True, do early, more frequent eval on train and val data
 early_eval_interval1 = 25
@@ -150,8 +154,47 @@ _cfg_parser.add_argument('--experiment_name', help='If provided with --task, ove
 # NEW: select batch preparation method: 'per_example' (default) or 'slicing'
 _cfg_parser.add_argument('--batch', choices=['per_example','slicing'], default='per_example',
                         help="Batch preparation method: per_example uses Dataset+DataLoader; slicing uses random-token slices.")
+_cfg_parser.add_argument(
+    '--PE',
+    choices=['absolute', 'abs', 'RoPE', 'rope', 't5', 'T5'],
+    default='absolute',
+    help='Which positional encoding to use: "absolute" (default), "RoPE", or "t5" (T5-style relative bias)'
+)
+
+# Optional T5 params: only used if you pick --PE t5, but harmless otherwise
+_cfg_parser.add_argument(
+    '--num_relative_buckets',
+    type=int,
+    default=None,
+    help='(optional) override num_relative_buckets for T5-style relative bias'
+)
+_cfg_parser.add_argument(
+    '--max_relative_distance',
+    type=int,
+    default=None,
+    help='(optional) override max_relative_distance for T5-style relative bias'
+)
+_cfg_parser.add_argument('--greedy', action='store_true',
+                        help='Use greedy decoding for evaluation (sets top_k=1, temperature=0).')
+# optional: allow overriding top_k/temperature explicitly
+_cfg_parser.add_argument('--top_k', type=int, default=None,
+                        help='Override top_k for generation (default from config).')
+_cfg_parser.add_argument('--temperature', type=float, default=None,
+                        help='Override temperature for generation (default from config).')
+
+
 _known_args, _remaining_argv = _arg_parser = _cfg_parser.parse_known_args()
 
+# Decide batch method from CLI
+batch_method = getattr(_known_args, 'batch', 'per_example')
+print(f"Using batch preparation method: {batch_method}")
+
+# apply greedy / overrides from CLI
+greedy = getattr(_known_args, 'greedy', greedy)
+if getattr(_known_args, 'top_k', None) is not None:
+    top_k = int(_known_args.top_k)
+if getattr(_known_args, 'temperature', None) is not None:
+    temperature = float(_known_args.temperature)
 
 cfg_file_to_load = None
 if _known_args.config_path:
@@ -304,11 +347,7 @@ train_data_str = concat_strip_dollar(train_data_path)
 val_data_str = concat_strip_dollar(val_data_path)
 
 # Create metadata from the combined data
-meta, data_encoder, data_decoder = create_meta_for_addition(train_data_str)
-
-# Decide batch method from CLI
-batch_method = getattr(_known_args, 'batch', 'per_example')
-print(f"Using batch preparation method: {batch_method}")
+meta, data_encoder, data_decoder = create_meta_for_addition(train_data_str, batch_method)
 
 def get_infinite_dataloader(dataloader):
     while True:
@@ -374,37 +413,37 @@ else:
     train_data = data_encoder(train_data_str)  # 1D tensor / numpy -> convert below if needed
     val_data = data_encoder(val_data_str)
 
-    # Ensure 1D torch tensors
-    if isinstance(train_data, np.ndarray):
-        train_data = torch.from_numpy(train_data)
-    if isinstance(val_data, np.ndarray):
-        val_data = torch.from_numpy(val_data)
+    # # Ensure 1D torch tensors
+    # if isinstance(train_data, np.ndarray):
+    #     train_data = torch.from_numpy(train_data)
+    # if isinstance(val_data, np.ndarray):
+    #     val_data = torch.from_numpy(val_data)
 
-    # slicing get_batch used in your second file
-    def get_batch(split='train'):
-        data = train_data if split == 'train' else val_data
-        assert data.dim() == 1, "slicing expects 1D sequence of token ids"
-        max_start = data.size(0) - block_size - 1
-        if max_start <= 0:
-            raise ValueError("Dataset shorter than block_size")
-        ix = torch.randint(0, max_start, (batch_size,), dtype=torch.long)
-        x = torch.stack([data[i:i+block_size].long() for i in ix], dim=0)
-        y = torch.stack([data[i+1:i+1+block_size].long() for i in ix], dim=0)
+    # # slicing get_batch used in your second file
+    # def get_batch(split='train'):
+    #     data = train_data if split == 'train' else val_data
+    #     assert data.dim() == 1, "slicing expects 1D sequence of token ids"
+    #     max_start = data.size(0) - block_size - 1
+    #     if max_start <= 0:
+    #         raise ValueError("Dataset shorter than block_size")
+    #     ix = torch.randint(0, max_start, (batch_size,), dtype=torch.long)
+    #     x = torch.stack([data[i:i+block_size].long() for i in ix], dim=0)
+    #     y = torch.stack([data[i+1:i+1+block_size].long() for i in ix], dim=0)
 
-        if device_type == 'cuda':
-            x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
-        else:
-            x, y = x.to(device), y.to(device)
-        return x, y
+    #     if device_type == 'cuda':
+    #         x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
+    #     else:
+    #         x, y = x.to(device), y.to(device)
+    #     return x, y
 
 
-
-# meta already created above
-pad_id = meta['stoi']['<pad>']
-eos_id = meta['stoi']['$']
-# expose these in config for other code to use
-config['pad_id'] = pad_id
-config['eos_id'] = eos_id
+if batch_method == 'per_example':
+    # meta already created above
+    pad_id = meta['stoi']['<pad>']
+    eos_id = meta['stoi']['$']
+    # expose these in config for other code to use
+    config['pad_id'] = pad_id
+    config['eos_id'] = eos_id
 
 meta_vocab_size = meta['vocab_size']
 print(f"Using vocabulary size: {meta_vocab_size}")
@@ -454,6 +493,40 @@ print("Collected test files:")
 for tp in test_files:
     print(tp)
 
+import importlib
+
+# normalize/interpret the --PE option we parsed earlier
+pe_choice = getattr(_known_args, 'PE', 'absolute')
+pe_choice_norm = pe_choice.lower()
+
+if pe_choice_norm in ('absolute', 'abs'):
+    model_module_name = 'model'
+elif pe_choice_norm in ('rope', 'rope', 'rope'.lower(), 'rope'.upper(), 'rope'):  # just keep simple check below
+    model_module_name = 'model_rope'
+elif pe_choice_norm in ('t5', 't5'):
+    model_module_name = 'model_t5bias'
+else:
+    # fall back to model.py for safety
+    model_module_name = 'model'
+
+
+try:
+    model_module = importlib.import_module(model_module_name)
+except Exception as e:
+    raise ImportError(f"Unable to import positional-encoding model module '{model_module_name}': {e}")
+
+
+# Expect the module to provide GPTConfig and GPT (same API as model.py)
+try:
+    GPTConfig = getattr(model_module, 'GPTConfig')
+    GPT = getattr(model_module, 'GPT')
+except AttributeError:
+    raise ImportError(f"Module '{model_module_name}' must export GPTConfig and GPT classes")
+
+# save selection to config for logging
+config['PE'] = pe_choice
+print(f"Using positional encoding: {pe_choice} (module: {model_module_name}.py)")
+
 
 model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=block_size,
                   bias=bias, vocab_size=None, dropout=dropout, use_flash=use_flash) # start with model_args from command line
@@ -464,8 +537,18 @@ if init_from == 'scratch':
     if meta_vocab_size is None:
         print("defaulting to vocab_size of GPT-2 to 50304 (50257 rounded up for efficiency)")
     model_args['vocab_size'] = meta_vocab_size if meta_vocab_size is not None else 50304
+
+    # If user supplied T5-specific overrides on CLI, include them in model_args
+    if getattr(_known_args, 'num_relative_buckets', None) is not None:
+        model_args['num_relative_buckets'] = int(_known_args.num_relative_buckets)
+    if getattr(_known_args, 'max_relative_distance', None) is not None:
+        model_args['max_relative_distance'] = int(_known_args.max_relative_distance)
+
     gptconf = GPTConfig(**model_args)
-    model = GPT(gptconf, pad_id)
+    if batch_method == 'per_example':
+        model = GPT(gptconf, pad_id)
+    else:
+        model = GPT(gptconf)
     model.to(device)
 elif init_from == 'resume':
     if resume_dir:
@@ -588,28 +671,6 @@ config['result_dir'] = result_dir
 with open(os.path.join(result_dir, "config.yaml"), "w") as yaml_file:
     yaml.dump(config, yaml_file, default_flow_style=False)
 
-
-# # build a dict of open file handles, one per dataset
-# csv_writers = {}
-# for dataset in stats_measurement_dataset_list:
-#     name = dataset['name']
-#     path = os.path.join(result_dir, f"{name}_stats.csv")
-#     f = open(path, 'w', newline='')
-#     writer = csv.DictWriter(f, fieldnames=[
-#         'iter',
-#         'ave_correct_probs',
-#         'ave_correct_preds',
-#         'ave_diff_probs_L1',
-#         'ave_diff_probs_L2',
-#         'ave_diff_probs_kl',
-#         'ave_diff_logits_L1',
-#         'ave_diff_logits_L2',
-#         'ave_diff_preds',
-#     ])
-#     writer.writeheader()
-#     csv_writers[name] = writer
-
-
 # Initialize additional metrics for statistical measurements
 stats_oo = [] # output-output mutual information
 stats_io = [] # input-output mutual information
@@ -686,82 +747,6 @@ while iter_num < max_iters:
     scaler.update()
     optimizer.zero_grad(set_to_none=True)
     
-    # REMOVED: Do additional statistical measurements 
-    #if mi_measurement:
-    #    if iter_num in mi_measure_iters:
-    #        model.eval()
-    #        
-    #        with torch.no_grad():
-    #            # eval_res = eval_model(model, meta, stats_measurement_dataset_list, digits_per_num=num_digit, batch_size=test_batch_size)
-    #            mi_stats = calc_model_dataset_mi(
-    #                model = model,
-    #                metadata = meta,
-    #                data = stats_measurement_data,
-    #                digits_per_num = num_digit,
-    #                batch_size = test_batch_size,
-    #                drop_leading_digit = drop_leading_digit
-    #            )
-    #
-    #        # for name, stats in eval_res.items():
-    #        #     if name == "model_embeddings":
-    #        #         continue
-    #        #     if name == 'base':
-    #        #         row = {
-    #        #             'iter': iter_num,
-    #        #             'ave_correct_probs': stats['ave_correct_probs'],
-    #        #             'ave_correct_preds': stats['ave_correct_preds'],
-    #        #         }
-    #        #     else:
-    #        #         row = {
-    #        #             'iter': iter_num,
-    #        #             'ave_correct_probs': stats['ave_correct_probs'],
-    #        #             'ave_correct_preds': stats['ave_correct_preds'],
-    #        #             'ave_diff_probs_L1': stats['ave_diff_probs_L1'],
-    #        #             'ave_diff_probs_L2': stats['ave_diff_probs_L2'],
-    #        #             'ave_diff_probs_kl': stats['ave_diff_probs_kl'],
-    #        #             'ave_diff_logits_L1': stats['ave_diff_logits_L1'],
-    #        #             'ave_diff_logits_L2': stats['ave_diff_logits_L2'],
-    #        #             'ave_diff_preds': stats['ave_diff_preds'],
-    #        #         }
-    #        #     # Write to the CSV file for this dataset
-    #        #     csv_writers[name].writerow(row)
-    #
-    #        
-    #        # Calculate output-output mutual information
-    #        mi_mat = mi_stats['output-output']['mutual_info']
-    #        nmi_mat = mi_stats['output-output']['normalized_mutual_info']
-    #        for i in range(mi_mat.shape[0]):
-    #            for j in range(i, mi_mat.shape[1]):
-    #                stats_oo.append({
-    #                    'iter': iter_num,
-    #                    'i': i,
-    #                    'j': j,
-    #                    'mi': mi_mat[i, j].item(),
-    #                    'nmi': nmi_mat[i, j].item()
-    #                })
-    #
-    #        # also calculate input-output mutual information
-    #        mi_mat_io = mi_stats['input-output']['mutual_info']
-    #        nmi_mat_io = mi_stats['input-output']['normalized_mutual_info']
-    #        for i in range(mi_mat_io.shape[0]):
-    #            for j in range(mi_mat_io.shape[1]):
-    #                stats_io.append({
-    #                    'iter': iter_num,
-    #                    'i': i,
-    #                    'j': j,
-    #                    'mi': mi_mat_io[i, j].item(),
-    #                    'nmi': nmi_mat_io[i, j].item()
-    #                })
-    #
-    #        # **NOW write out the two MI CSVs immediately:**
-    #        stats_oo_df = pd.DataFrame(stats_oo)
-    #        stats_oo_df.to_csv(os.path.join(result_dir, 'output_output_mi.csv'), index=False)
-    #
-    #        stats_io_df = pd.DataFrame(stats_io)
-    #        stats_io_df.to_csv(os.path.join(result_dir, 'input_output_mi.csv'), index=False)
-    #
-    #        model.train()
-        
     # Evaluation
     if iter_num % eval_interval == 0 or (more_early_eval1 and iter_num <= early_eval_border1 and iter_num % early_eval_interval1 == 0) or (more_early_eval2 and iter_num <= early_eval_border2 and iter_num % early_eval_interval2 == 0):
         losses = estimate_loss()
@@ -789,13 +774,13 @@ while iter_num < max_iters:
                 result_dir=result_dir,
                 verbose=False,
                 num_digit=num_digit,
-                zero_pad=zero_pad,
                 data_type=data_type,
                 operator=operator,
                 data_format=data_format,
                 analyze=True,
                 mode=mode, 
-                batch_method=batch_method
+                batch_method=batch_method,
+                randomize=randomize
             )
 
             test_accuracy = accuracy_multiple_file.get(main_test_name, None)
@@ -834,19 +819,19 @@ while iter_num < max_iters:
                 decode=lambda x: decode_addition(x, meta), 
                 verbose=False, 
                 num_digit=num_digit, 
-                zero_pad=zero_pad,
                 data_type=data_type, 
                 operator=operator, 
                 data_format=data_format,
                 mode=mode,
-                batch_method=batch_method
+                batch_method=batch_method,
+                randomize=randomize
             )
             
             # Add train accuracy to wandb_dict
             wandb_dict["train/accuracy"] = train_accuracy
 
             #### ADDED
-            if mi_measurement and operator == '+':
+            if mi_measurement and operator == '+' and batch_method == 'per_example':
                 if iter_num == 0:
                     mi_record_dict = {}
                 model.eval()
@@ -861,15 +846,64 @@ while iter_num < max_iters:
                         padding_token = train_dataset.pad_id
                     )    
                 mi_record_dict[f"iter_{iter_num}"] = mi_stats
-                wandb_dict["mi/units"] = mi_stats[0][2][0]
-                wandb_dict["mi/tens"] = mi_stats[1][2][0]
-                wandb_dict["mi/hundreds"] = mi_stats[2][2][0]
+                wandb_dict["mi/units-z"] = mi_stats[0][1][0]
+                wandb_dict["mi/tens-z"] = mi_stats[1][1][0]
+                wandb_dict["mi/hundreds-z"] = mi_stats[2][1][0]
+                wandb_dict["mi/units-carries"] = mi_stats[0][2][0]
+                wandb_dict["mi/tens-carries"] = mi_stats[1][2][0]
+                wandb_dict["mi/hundreds-carries"] = mi_stats[2][2][0]
                 wandb_dict["mi/thousands"] = mi_stats[3][0][0]
-                wandb_dict["mi/units-base"] = xyz_mi_list[0]['mi'][2][0]
-                wandb_dict["mi/tens-base"] = xyz_mi_list[1]['mi'][2][0]
-                wandb_dict["mi/hundreds-base"] = xyz_mi_list[2]['mi'][2][0]
+                wandb_dict["mi/units-z-base"] = xyz_mi_list[0]['mi'][1][0]
+                wandb_dict["mi/tens-z-base"] = xyz_mi_list[1]['mi'][1][0]
+                wandb_dict["mi/hundreds-z-base"] = xyz_mi_list[2]['mi'][1][0]
+                wandb_dict["mi/units-carries-base"] = xyz_mi_list[0]['mi'][2][0]
+                wandb_dict["mi/tens-carries-base"] = xyz_mi_list[1]['mi'][2][0]
+                wandb_dict["mi/hundreds-carries-base"] = xyz_mi_list[2]['mi'][2][0]
                 wandb_dict["mi/thousands-base"] = xyz_mi_list[3]['mi'][0][0]
                 model.train()
+
+                if master_process:  # only let the main process write files
+                    mi_csv_path = os.path.join(result_dir, 'mi_metrics.csv')
+
+                    # columns you requested (keep exact names so they match your wandb keys)
+                    mi_columns = [
+                        'iter',
+                        'train_loss',
+                        'mi/thousands-base',
+                        'mi/hundreds-z-base',
+                        'mi/tens-z-base',
+                        'mi/units-z-base',
+                        'mi/thousands',
+                        'mi/hundreds-z',
+                        'mi/tens-z',
+                        'mi/units-z',
+                        'mi/hundreds-carries-base',
+                        'mi/tens-carries-base',
+                        'mi/units-carries-base',
+                        'mi/hundreds-carries',
+                        'mi/tens-carries',
+                        'mi/units-carries'
+                    ]
+
+                    # build the row from wandb_dict and losses
+                    row = {c: None for c in mi_columns}    # start with None defaults
+                    row['iter'] = iter_num
+                    # use losses if available (you set losses above as estimate_loss())
+                    row['train_loss'] = losses['train'].item() if 'losses' in locals() else wandb_dict.get("train/loss", None)
+
+                    # pull MI values from wandb_dict (keys use the same names as above)
+                    for k in mi_columns:
+                        if k in ('iter', 'train_loss'):
+                            continue
+                        # wandb_dict uses exactly these keys in your code, so fetch them directly
+                        row[k] = wandb_dict.get(k, None)
+
+                    # write the row to CSV (append, write header if file does not exist)
+                    df_row = pd.DataFrame([row])
+                    header = not os.path.exists(mi_csv_path)
+                    # ensure result_dir exists
+                    os.makedirs(os.path.dirname(mi_csv_path), exist_ok=True)
+                    df_row.to_csv(mi_csv_path, mode='a', header=header, index=False)
             #### End of ADDED
       
         # Update and save basic metrics
@@ -920,13 +954,13 @@ if eval_addition:
         decode=lambda x: decode_addition(x, meta), 
         verbose=False, 
         num_digit=num_digit, 
-        zero_pad=zero_pad,
         data_type=data_type, 
         operator=operator, 
         data_format=data_format, 
         analyze=True,
         mode=mode,
-        batch_method=batch_method
+        batch_method=batch_method,
+        randomize=randomize
     )
     import csv
     # Save correct examples
@@ -957,12 +991,12 @@ if eval_addition_train:
         decode=lambda x: decode_addition(x, meta), 
         verbose=False, 
         num_digit=num_digit, 
-        zero_pad=zero_pad,
         data_type=data_type, 
         operator=operator, 
         data_format=data_format,
         mode=mode,
-        batch_method=batch_method
+        batch_method=batch_method,
+        randomize=randomize
     )
     
     
@@ -975,13 +1009,13 @@ test_names, accuracy_multiple_file, correct_examples_multiple_file, incorrect_ex
     result_dir=result_dir,
     verbose=False,
     num_digit=num_digit,
-    zero_pad=zero_pad,
     data_type=data_type,
     operator=operator,
     data_format=data_format,
     analyze=True,
     mode=mode,
-    batch_method=batch_method
+    batch_method=batch_method,
+    randomize=randomize
 )
 
 test_accuracy = accuracy_multiple_file.get(main_test_name, None)

@@ -7,7 +7,7 @@ wandb_log = True # override via command line if you like
 wandb_project = 'multiplication'
 
 # to edit: wandb run name
-wandb_run_name = '40_digit_times_1_digit'
+wandb_run_name = '40_digit_times_1_digit_reversed'
 
 # baby GPT model :)
 n_layer = 6
@@ -36,15 +36,12 @@ max_new_tokens = 44
 
 drop_leading_digit = False
 
-# whether need zero‐padding
-zero_pad = False
-
 # ===== Learning Rate Policy ===== #
 learning_rate = 1e-3
 
 # to edit: the number of training iterations
-max_iters = 5000
-lr_decay_iters = 5000 # make equal to max_iters usually
+max_iters = 10000
+lr_decay_iters = 10000 # make equal to max_iters usually
 
 beta1 = 0.9
 beta2 = 0.98
@@ -81,6 +78,6 @@ main_test_name = "test_reverse"
 mode = "read_gold_as_str"
 
 mi_measurement = False
-more_early_eval1 = True 
+more_early_eval1 = False 
 early_eval_interval1 = 5
 early_eval_border1 = 100
