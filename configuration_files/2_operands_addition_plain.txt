@@ -1,13 +1,24 @@
 # to edit: do an evaluation every {eval_interval} iterations
+<<<<<<< HEAD
 eval_interval = 50
+=======
+eval_interval = 100
+>>>>>>> my_addition/main
 eval_iters = 1
 always_save_checkpoint = True
 
 wandb_log = True # override via command line if you like
+<<<<<<< HEAD
 wandb_project = '2_op_addition'
 
 # to edit: wandb run name
 wandb_run_name = '2_operands_0_to_999_uniform_plain'
+=======
+wandb_project = 'addition'
+
+# to edit: wandb run name
+wandb_run_name = '2_operands_0_to_999_uniform_gold_by_reading_plain'
+>>>>>>> my_addition/main
 
 # baby GPT model :)
 n_layer = 6
@@ -36,6 +47,12 @@ max_new_tokens = 5
 
 drop_leading_digit = False
 
+<<<<<<< HEAD
+=======
+# whether need zero‐padding
+zero_pad = False
+
+>>>>>>> my_addition/main
 # ===== Learning Rate Policy ===== #
 learning_rate = 1e-3
 

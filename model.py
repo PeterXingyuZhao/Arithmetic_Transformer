@@ -273,5 +273,4 @@ class GPT(nn.Module):
 
       # append next token
       idx = torch.cat((idx, idx_next), dim=1)
-
     return idx

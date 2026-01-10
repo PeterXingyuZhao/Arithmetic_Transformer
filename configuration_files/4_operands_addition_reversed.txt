@@ -18,6 +18,10 @@ dropout = 0.2
 # to edit: 'plain' or 'reverse' or 'scratchpad' or 'max' or 'sorting'
 data_format='reverse'
 operator='+'
+<<<<<<< HEAD
+=======
+dataset = 'bal'
+>>>>>>> my_addition/main
 batch_size = 512
 block_size = 32 # context of up to 256 previous characters
 
@@ -35,12 +39,23 @@ max_new_tokens = 5
 
 drop_leading_digit = False
 
+<<<<<<< HEAD
+=======
+# whether need zero‐padding
+zero_pad = False
+
+>>>>>>> my_addition/main
 # ===== Learning Rate Policy ===== #
 learning_rate = 1e-3
 
 # to edit: the number of training iterations
+<<<<<<< HEAD
 max_iters = 800000 # for four operands addition, recommend >= 200000
 lr_decay_iters = 800000 # make equal to max_iters
+=======
+max_iters = 400000 # for four operands addition, recommend >= 200000
+lr_decay_iters = 400000 # make equal to max_iters
+>>>>>>> my_addition/main
 
 beta1 = 0.9
 beta2 = 0.98
@@ -51,7 +66,11 @@ device='cuda:0'
 
 # to edit: the output directory; Path is relative to the project's main directory. 
 # For example, the project's main directory might be "/content/drive/MyDrive/addition/"
+<<<<<<< HEAD
 out_dir = 'results/4_operands_0_to_999_uniform/reverse_out_complete_MI'
+=======
+out_dir = 'results/4_operands_0_to_999_uniform/reverse_out'
+>>>>>>> my_addition/main
 
 # to edit: data directory; Path is relative to the project's main directory. 
 data_dir = 'data/4_operands_0_to_999_uniform/'
@@ -75,6 +94,9 @@ main_test_name = "test_reverse"
 
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
 mode = "read_gold_as_str"
+<<<<<<< HEAD
 
 # to edit: Can be 'units', 'tens', 'hundreds', 'thousands', or None
 randomize = None
+=======
+>>>>>>> my_addition/main

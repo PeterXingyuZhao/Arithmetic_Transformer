@@ -1,0 +1,81 @@
+# to edit: do an evaluation every {eval_interval} iterations
+eval_interval = 2000
+eval_iters = 1
+always_save_checkpoint = True
+
+wandb_log = True # override via command line if you like
+wandb_project = 'addition'
+
+# to edit: wandb run name
+wandb_run_name = 'addition_2_to_4_operands'
+
+# baby GPT model :)
+n_layer = 6
+n_head = 6
+n_embd = 384
+dropout = 0.2
+
+# to edit: 'plain' or 'reverse' or 'scratchpad' or 'max' or 'sorting'
+data_format='reverse'
+operator='+'
+dataset = 'bal'
+batch_size = 16
+block_size = 1024
+
+# to edit: 'scratch' or 'resume', whether train from scratch or resume from a saved checkpoint
+init_from = 'scratch'
+iter_num = 0
+# to edit: the checkpoint from which to resume training
+ckpt_path_name = 'ckpt_iter_19000_acc.pt'
+
+# to edit: max number of digits in each operand
+num_digit = 3
+
+# to edit: maximum number of output tokens (including '$')
+max_new_tokens = 5
+
+drop_leading_digit = False
+
+# whether need zero‐padding
+zero_pad = False
+
+# ===== Learning Rate Policy ===== #
+learning_rate = 1e-3
+
+# to edit: the number of training iterations
+max_iters = 300000 # for four operands addition, recommend >= 200000
+lr_decay_iters = 300000 # make equal to max_iters
+
+beta1 = 0.9
+beta2 = 0.98
+warmup_iters = 100
+
+# ===== Device ===== #
+device='cuda:0'
+
+# to edit: the output directory; Path is relative to the project's main directory. 
+# For example, the project's main directory might be "/content/drive/MyDrive/addition/"
+out_dir = 'results/addition_2_to_4_operands/reverse_out'
+
+# to edit: data directory; Path is relative to the project's main directory. 
+data_dir = 'data/addition_2_to_4_operands/'
+
+# to edit: training data
+train_data_name = 'train_reverse.txt'
+
+# to edit: whether do evaluation on training data to see if the model is simply memorizing
+eval_addition_train = True
+train_data_test_name = "train_eval_reverse.txt"
+
+# to edit: validation data
+val_data_name = 'val_reverse.txt'
+
+# to edit: test data; It can be either without gold (thus gold by computing) or with gold (thus gold by reading)
+# "test_file_name" can be either a single file, or the name of the directory that contains multiple test files 
+# "main_test_name" is the name, without extension, of the test file (in case there are multiple test files) that's to be displayed in wandb
+eval_addition = True
+test_file_name = 'test_reverse'
+main_test_name = "test_reverse"
+
+# to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
+mode = "read_gold_as_str"

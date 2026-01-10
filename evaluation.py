@@ -72,6 +72,21 @@ def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold"):
             raise ValueError(f"Unsupported operation: {operation}")
 
         return operands_str, result, operation
+    
+    # version 2: read the groundtruth from the evaluation files
+    if mode == "read_gold_as_str":
+        # parts[1] is the result part, which may contain a trailing '$' or newline
+        result_str = parts[1].strip()
+        if result_str.endswith('\n'):
+            result_str = result_str[:-1].strip()
+        if result_str.endswith('$'):
+            result_str = result_str[:-1].strip()
+        if data_format == "reverse":
+            sign = ''
+            if result_str.startswith('-') or result_str.startswith('+'):
+                sign = result_str[0]
+                result_str = result_str[1:]
+            result_str = sign + result_str[::-1]  # reverse the result string if needed
 
     # version 2: read the groundtruth from the evaluation files
     if mode == "read_gold_as_str":
