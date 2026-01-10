@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import csv
 
+# 9897,9892#>$
 
 def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold"):
     """Unified parser: mode='compute_gold' computes the groudtruth on the fly;
@@ -88,7 +89,7 @@ def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold"):
                 result_str = result_str[1:]
             result_str = sign + result_str[::-1]  # reverse the result string if needed
 
-        return operands_str, result_str, operation
+        return operands_str, result_str
 
 _precomputed_batches = {}
 def prepare_addition_batches(config, encode, num_digit=3, zero_pad=False, binary=False, data_type='binary',
@@ -119,7 +120,7 @@ def prepare_addition_batches(config, encode, num_digit=3, zero_pad=False, binary
         prompt_length = x.size(1)
 
         # parse out gold for evaluation later
-        operands, result, op = get_abc_new(
+        operands, result = get_abc_new(
             line,
             zero_pad=zero_pad,
             data_format=data_format,
