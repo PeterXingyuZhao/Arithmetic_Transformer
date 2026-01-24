@@ -77,6 +77,7 @@ main_test_name = "test"
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
 mode = "read_gold_as_str"
 
+# to edit: whether do mutual information tacking (addition supported only)
 mi_measurement = False
 more_early_eval1 = False 
 early_eval_interval1 = 5

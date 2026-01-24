@@ -14,6 +14,13 @@ Description:
       - repeating last two digits
     Plots counts vs iteration and saves 'errors_vs_iter.png'.
     Additionally collects examples that trigger each error type into four CSV files.
+
+    NEW: also creates separate PDF plots saved in the same directory as the input CSV:
+      - repeat_last_digit_vs_iter.pdf  (repeat error rate = count / 1000)
+      - swap_last_digit_vs_iter.pdf    (swap error rate = count / 1000)
+
+    At the top of the file you can change visualization options:
+      XLABEL_FONTSIZE, YLABEL_FONTSIZE, LINE_WIDTH, MIN_ITER, MAX_ITER, TICK_FONTSIZE
 """
 import sys
 import os
@@ -21,6 +28,18 @@ import re
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+# -----------------------------
+# --- USER CHANGEABLE OPTIONS ---
+# -----------------------------
+# These are variables you can change (NOT command-line args).
+XLABEL_FONTSIZE = 22      # font size for x-axis label in the extra PDF plots
+YLABEL_FONTSIZE = 22      # font size for y-axis label in the extra PDF plots
+LINE_WIDTH = 3.0          # line thickness for the extra PDF plots
+MIN_ITER = 1              # minimum iteration to show on x-axis (None => automatic)
+MAX_ITER = 10000          # maximum iteration to show on x-axis (None => automatic)
+TICK_FONTSIZE = 18        # font size for x/y tick labels (applies to both plots)
+# -----------------------------
 
 # -----------------------------
 # Helpers: parsing and checks
@@ -301,7 +320,7 @@ def main(csv_path='results.csv', out_png='errors_vs_iter.png'):
         'repeat_last_two': repeat_last2_y,
     })
 
-    # Plot all four on a single figure
+    # Plot all four on a single figure (existing PNG behavior)
     plt.figure(figsize=(10,6))
     plt.plot(counts_df['iter'], counts_df['swap_last_digit'], marker='o', label='swap last digit')
     plt.plot(counts_df['iter'], counts_df['swap_last_two'], marker='o', label='swap last two')
@@ -312,9 +331,95 @@ def main(csv_path='results.csv', out_png='errors_vs_iter.png'):
     plt.title('Error counts vs iteration')
     plt.grid(True)
     plt.legend()
+    # apply tick font size for the main PNG plot
+    plt.tick_params(axis='both', which='major', labelsize=TICK_FONTSIZE)
     plt.tight_layout()
     plt.savefig(out_png)
     print("Saved plot to", out_png)
+
+    # -----------------------------
+    # NEW: separate PDF plots for repeat_last_digit and swap_last_digit (showing error RATE)
+    # They share the same configuration (x-range, fonts, linewidth).
+    # -----------------------------
+    # Decide x-range (filter) based on MIN_ITER/MAX_ITER variables set at top.
+    xr_min = MIN_ITER
+    xr_max = MAX_ITER
+
+    if xr_min is None and xr_max is None:
+        mask = np.ones(len(counts_df), dtype=bool)
+    else:
+        if xr_min is None:
+            xr_min = int(min(counts_df['iter']))
+        if xr_max is None:
+            xr_max = int(max(counts_df['iter']))
+        mask = (counts_df['iter'] >= xr_min) & (counts_df['iter'] <= xr_max)
+
+    # If mask selects no rows, fall back to full range and warn
+    if mask.sum() == 0:
+        mask = np.ones(len(counts_df), dtype=bool)
+        print("Warning: requested x range produced empty data. Falling back to full iteration range for PDF plots.")
+
+    # shared plot data
+    plot_x = counts_df['iter'][mask].tolist()
+    plot_repeat_counts = counts_df['repeat_last_digit'][mask].tolist()
+    plot_swap_counts = counts_df['swap_last_digit'][mask].tolist()
+
+    # convert counts -> rate (divide by 1000)
+    plot_repeat_rate = [float(v) / 1000.0 for v in plot_repeat_counts]
+    plot_swap_rate = [float(v) / 1000.0 for v in plot_swap_counts]
+
+    # Save directory for PDFs
+    csv_dir = os.path.dirname(os.path.abspath(csv_path))
+
+    # -- Repeat-last-digit rate plot --
+    plt.figure(figsize=(8,5))
+    plt.plot(plot_x, plot_repeat_rate, linewidth=LINE_WIDTH)
+    plt.xlabel("Training steps", fontsize=XLABEL_FONTSIZE)
+    plt.ylabel("Repeating error rate", fontsize=YLABEL_FONTSIZE)
+    # plt.title("Repeat-last-digit error rate vs Training steps")
+    plt.grid(True)
+    plt.tick_params(axis='both', which='major', labelsize=TICK_FONTSIZE)
+    # plt.xlim(plot_x[0], plot_x[-1])
+    # determine x-limits using MIN_ITER/MAX_ITER or fall back to data bounds
+    x0 = MIN_ITER if MIN_ITER is not None else (plot_x[0] if len(plot_x) > 0 else None)
+    x1 = MAX_ITER if MAX_ITER is not None else (plot_x[-1] if len(plot_x) > 0 else None)
+
+    # apply x-limits depending on which are present
+    if x0 is not None and x1 is not None:
+        plt.xlim(x0-1, x1)
+    elif x0 is not None:
+        plt.xlim(left=x0-1)
+    elif x1 is not None:
+        plt.xlim(right=x1)
+    plt.tight_layout()
+    repeat_pdf_path = os.path.join(csv_dir, "repeat_last_digit_vs_iter.pdf")
+    plt.savefig(repeat_pdf_path)
+    print("Saved repeat_last_digit plot to", repeat_pdf_path)
+
+    # -- Swap-last-digit rate plot --
+    plt.figure(figsize=(8,5))
+    plt.plot(plot_x, plot_swap_rate, linewidth=LINE_WIDTH)
+    plt.xlabel("Training steps", fontsize=XLABEL_FONTSIZE)
+    plt.ylabel("Swapping error rate", fontsize=YLABEL_FONTSIZE)
+    # plt.title("Swap-last-digit error rate vs Training steps")
+    plt.grid(True)
+    plt.tick_params(axis='both', which='major', labelsize=TICK_FONTSIZE)
+    # plt.xlim(plot_x[0], plot_x[-1])
+    # determine x-limits using MIN_ITER/MAX_ITER or fall back to data bounds
+    x0 = MIN_ITER if MIN_ITER is not None else (plot_x[0] if len(plot_x) > 0 else None)
+    x1 = MAX_ITER if MAX_ITER is not None else (plot_x[-1] if len(plot_x) > 0 else None)
+
+    # apply x-limits depending on which are present
+    if x0 is not None and x1 is not None:
+        plt.xlim(x0-1, x1)
+    elif x0 is not None:
+        plt.xlim(left=x0-1)
+    elif x1 is not None:
+        plt.xlim(right=x1)
+    plt.tight_layout()
+    swap_pdf_path = os.path.join(csv_dir, "swap_last_digit_vs_iter.pdf")
+    plt.savefig(swap_pdf_path)
+    print("Saved swap_last_digit plot to", swap_pdf_path)
 
     # Prepare output folder for example CSVs
     out_folder = "error_examples"
@@ -351,6 +456,8 @@ def main(csv_path='results.csv', out_png='errors_vs_iter.png'):
     return {
         'counts_df': counts_df,
         'plot_path': out_png,
+        'repeat_pdf': repeat_pdf_path,
+        'swap_pdf': swap_pdf_path,
         'example_files': {
             'swap_last_digit': os.path.join(out_folder, "swap_last_digit_examples.csv"),
             'swap_last_two': os.path.join(out_folder, "swap_last_two_examples.csv"),

@@ -78,3 +78,6 @@ mode = "read_gold_as_str"
 
 # to edit: Can be 'units', 'tens', 'hundreds', 'thousands', or None
 randomize = 'None'
+
+# to edit: whether do mutual information tacking (addition supported only)
+mi_measurement = False

@@ -1,5 +1,5 @@
 # to edit: do an evaluation every {eval_interval} iterations
-eval_interval = 100
+eval_interval = 200
 eval_iters = 1
 always_save_checkpoint = True
 
@@ -7,7 +7,7 @@ wandb_log = True # override via command line if you like
 wandb_project = 'addition'
 
 # to edit: wandb run name
-wandb_run_name = '4_operands_sorting_uniform'
+wandb_run_name = '4_operands_sorting_uniform_corrected'
 
 # baby GPT model :)
 n_layer = 6
@@ -52,7 +52,7 @@ device='cuda:0'
 
 # to edit: the output directory; Path is relative to the project's main directory. 
 # For example, the project's main directory might be "/content/drive/MyDrive/addition/"
-out_dir = 'results/4_operands_sorting_uniform/intend_poor_performance'
+out_dir = 'results/4_operands_sorting_uniform/intend_poor_performance_corrected'
 
 # to edit: data directory; Path is relative to the project's main directory. 
 data_dir = 'data/4_operands_sorting_uniform/'
@@ -76,3 +76,6 @@ main_test_name = "test"
 
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
 mode = "read_gold_as_str"
+
+# to edit: whether do mutual information tacking (addition supported only)
+mi_measurement = False

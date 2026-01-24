@@ -4,17 +4,10 @@ eval_iters = 1
 always_save_checkpoint = True
 
 wandb_log = True # override via command line if you like
-<<<<<<< HEAD
 wandb_project = '4_op_addition'
 
 # to edit: wandb run name
 wandb_run_name = '4_operands_0_to_999_uniform_plain_greedy'
-=======
-wandb_project = 'addition'
-
-# to edit: wandb run name
-wandb_run_name = '4_operands_0_to_999_uniform_plain'
->>>>>>> my_addition/main
 
 # baby GPT model :)
 n_layer = 6
@@ -25,10 +18,6 @@ dropout = 0.2
 # to edit: 'plain' or 'reverse' or 'scratchpad' or 'max' or 'sorting'
 data_format='plain'
 operator='+'
-<<<<<<< HEAD
-=======
-dataset = 'bal'
->>>>>>> my_addition/main
 batch_size = 512
 block_size = 32 # context of up to 256 previous characters
 
@@ -46,23 +35,12 @@ max_new_tokens = 5
 
 drop_leading_digit = False
 
-<<<<<<< HEAD
-=======
-# whether need zero‐padding
-zero_pad = False
-
->>>>>>> my_addition/main
 # ===== Learning Rate Policy ===== #
 learning_rate = 1e-3
 
 # to edit: the number of training iterations
-<<<<<<< HEAD
 max_iters = 800000 # for four operands addition, recommend >= 200000
 lr_decay_iters = 800000 # make equal to max_iters
-=======
-max_iters = 200000 # for four operands addition, recommend >= 200000
-lr_decay_iters = 200000 # make equal to max_iters
->>>>>>> my_addition/main
 
 beta1 = 0.9
 beta2 = 0.98
@@ -73,11 +51,7 @@ device='cuda:0'
 
 # to edit: the output directory; Path is relative to the project's main directory. 
 # For example, the project's main directory might be "/content/drive/MyDrive/addition/"
-<<<<<<< HEAD
-out_dir = 'results/4_operands_0_to_999_uniform/plain_out_greedy'
-=======
 out_dir = 'results/4_operands_0_to_999_uniform/plain_out'
->>>>>>> my_addition/main
 
 # to edit: data directory; Path is relative to the project's main directory. 
 data_dir = 'data/4_operands_0_to_999_uniform/'
@@ -100,11 +74,10 @@ test_file_name = 'test.txt'
 main_test_name = "test"
 
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
-<<<<<<< HEAD
 mode = "read_gold_as_str"
 
 # to edit: Can be 'units', 'tens', 'hundreds', 'thousands', or None
 randomize = None
-=======
-mode = "read_gold_as_str"
->>>>>>> my_addition/main
+
+# to edit: whether do mutual information tacking (addition supported only)
+mi_measurement = True

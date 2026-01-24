@@ -75,7 +75,6 @@ eval_other = False # use this to evaluate other operations (ex. train on operato
 other_operator = '+'
 eval_addition_train = False
 algo_reason = False
-add_space = False
 
 # model
 n_layer = 6
@@ -106,12 +105,10 @@ device = 'cuda' # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps'
 dtype = 'bfloat16' if torch.cuda.is_bf16_supported() else 'float16' # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
 compile = True # use PyTorch 2.0 to compile the model to be faster
 use_flash = True
-data_type = 'binary' # 'binary' by default, can be 'text'
 operator = '+' # can be '+', '-', '*'
 data_shuffle = True
 data_format = 'plain' # 'plain' or 'reverse' or 'algo_reasoning'
 vocabulary = 'all_ascii_chars' # can be 'all_ascii_chars' or 'numbers_only' or 'custom_input_data'
-meta_path_specified = True # use saved meta_file (False if data_type='text')
 eps = 0
 tokenizer = 'char' # by default, use char level tokenizer. but for pretrained models, use openai tokenizer eg: 'gpt2'
 
@@ -746,10 +743,8 @@ while iter_num < max_iters:
                 result_dir=result_dir,
                 verbose=False,
                 num_digit=num_digit,
-                data_type=data_type,
                 operator=operator,
                 data_format=data_format,
-                analyze=True,
                 mode=mode, 
                 batch_method=batch_method,
                 randomize=randomize
@@ -791,7 +786,6 @@ while iter_num < max_iters:
                 decode=lambda x: decode_addition(x, meta), 
                 verbose=False, 
                 num_digit=num_digit, 
-                data_type=data_type, 
                 operator=operator, 
                 data_format=data_format,
                 mode=mode,
@@ -926,10 +920,8 @@ if eval_addition:
         decode=lambda x: decode_addition(x, meta), 
         verbose=False, 
         num_digit=num_digit, 
-        data_type=data_type, 
         operator=operator, 
         data_format=data_format, 
-        analyze=True,
         mode=mode,
         batch_method=batch_method,
         randomize=randomize
@@ -963,7 +955,6 @@ if eval_addition_train:
         decode=lambda x: decode_addition(x, meta), 
         verbose=False, 
         num_digit=num_digit, 
-        data_type=data_type, 
         operator=operator, 
         data_format=data_format,
         mode=mode,
@@ -981,10 +972,8 @@ test_names, accuracy_multiple_file, correct_examples_multiple_file, incorrect_ex
     result_dir=result_dir,
     verbose=False,
     num_digit=num_digit,
-    data_type=data_type,
     operator=operator,
     data_format=data_format,
-    analyze=True,
     mode=mode,
     batch_method=batch_method,
     randomize=randomize

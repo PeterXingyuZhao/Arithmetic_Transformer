@@ -7,34 +7,58 @@ import math
 import os
 import pandas as pd
 import csv
+import re
+from typing import List, Optional
 
+
+def parse_perm_spec(spec: str) -> Optional[List[int]]:
+    """
+    Parse a permutation specification.
+
+    Preserves old behavior:
+      - If spec is digits-only (e.g. "2431"), treat EACH CHARACTER as a token -> [2,4,3,1]
+    Extended behavior:
+      - If spec contains any non-digit separators (spaces/commas/etc), split into integer tokens
+        e.g. "11 10 9" -> [11,10,9],  "11,10,9" -> [11,10,9]
+
+    Returns None if it can't parse any tokens.
+    """
+    if spec is None:
+        return None
+    s = str(spec).strip()
+    if not s:
+        return None
+
+    if s.isdigit():
+        # old behavior: each char is a position
+        return [int(ch) for ch in s]
+
+    # new behavior: split on any non-digit
+    toks = [t for t in re.split(r"\D+", s) if t]
+    if not toks:
+        return None
+    return [int(t) for t in toks]
+
+
+def is_perm_1_to_n(spec: str, n: int) -> bool:
+    perm = parse_perm_spec(spec)
+    if perm is None or len(perm) != n:
+        return False
+    return set(perm) == set(range(1, n + 1))
 
 def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold"):
-    """Unified parser: mode='compute_gold' computes the groudtruth on the fly;
-       mode='read_gold_as_str' reads the groundtruth from the evaluation files (testing, validation) to do string matching.
-    Returns either
-      (operands_str, result_int, operation)            # compute_gold
-    or
-      (operands_str, result_str)                      # read_gold_as_str
-    """
+    """Unified parser... (unchanged docstring)"""
 
-    def _is_permutation_of_1_to_n(perm: str, n: int) -> bool:
-        """Return True if perm is a permutation of '1'..str(n)."""
-        if len(perm) != n:
-            return False
-        try:
-            expected = {str(i) for i in range(1, n + 1)}
-            return set(perm) == expected
-        except Exception:
-            return False
+    if data_format == "comparison":
+        delimiter = '#'
+    else:
+        delimiter = '='
 
-    # Split the input string into parts
-    parts = abc.split('=')
+    parts = abc.split(delimiter)
     if len(parts) != 2:
         print(f'Invalid format, expected "a+b+c...=result", got: {abc}')
         return None, None, None
 
-    # Get the operands part (before =)
     operands_str = parts[0]
     if operands_str and operands_str[0] == '$':
         operands_str = operands_str[1:]
@@ -43,7 +67,6 @@ def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold"):
     if 'Target' in operands_str:
         operands_str = operands_str.split('\nTarget')[0]
 
-    # version 1: compute the result
     if mode == "compute_gold":
         if '+' in abc:
             operation = '+'
@@ -54,10 +77,8 @@ def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold"):
         else:
             print(f'operation not found, abc: {abc}')
             return None, None, None
-        # Split into individual operands
-        operands = [op.strip() for op in operands_str.split(operation)]
 
-        # Clean up operands
+        operands = [op.strip() for op in operands_str.split(operation)]
         operands = [op.replace(' ', '') for op in operands]
 
         if operation == '+':
@@ -72,25 +93,8 @@ def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold"):
             raise ValueError(f"Unsupported operation: {operation}")
 
         return operands_str, result, operation
-    
-    # version 2: read the groundtruth from the evaluation files
-    if mode == "read_gold_as_str":
-        # parts[1] is the result part, which may contain a trailing '$' or newline
-        result_str = parts[1].strip()
-        if result_str.endswith('\n'):
-            result_str = result_str[:-1].strip()
-        if result_str.endswith('$'):
-            result_str = result_str[:-1].strip()
-        if data_format == "reverse":
-            sign = ''
-            if result_str.startswith('-') or result_str.startswith('+'):
-                sign = result_str[0]
-                result_str = result_str[1:]
-            result_str = sign + result_str[::-1]  # reverse the result string if needed
 
-    # version 2: read the groundtruth from the evaluation files
     if mode == "read_gold_as_str":
-        # parts[1] is the result part, which may contain a trailing '$' or newline
         result_str = parts[1].strip()
         if result_str.endswith('\n'):
             result_str = result_str[:-1].strip()
@@ -105,51 +109,40 @@ def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold"):
         else:
             core = result_str
 
-        # normalize data_format naming
         df = (data_format or "").lower()
-        if df in ("plain", "normal", "1234"):
-            # no change
+
+        if df in ("plain", "normal", "1234", ""):
             normalized = core
         elif df in ("reverse", "reversed", "4321"):
-            # reverse digits back to canonical order
             normalized = core[::-1]
         else:
-            # try to interpret data_format as a permutation like "2143"
-            # Only attempt if permutation length matches core length and it's a permutation of 1..n
-            perm = data_format.strip()
+            # NEW: accept either "2431" OR "2 4 3 1" OR "11 10 ... 32"
+            perm_list = parse_perm_spec(str(data_format))
             n = len(core)
-            if _is_permutation_of_1_to_n(perm, n):
-                # inverse-permute: given output[j] = s[perm[j]-1], we recover s by:
+            if perm_list is not None and len(perm_list) == n and set(perm_list) == set(range(1, n + 1)):
+                # inverse-permute: output[j] = original[perm[j]-1]
                 s_list = [''] * n
+                ok = True
                 for j, ch in enumerate(core):
-                    target_idx = int(perm[j]) - 1  # where this char belongs in the original string
+                    target_idx = perm_list[j] - 1
                     if 0 <= target_idx < n:
                         s_list[target_idx] = ch
                     else:
-                        # malformed perm, fallback to core unchanged
-                        s_list = None
+                        ok = False
                         break
-                if s_list is None or '' in s_list:
-                    # fallback: treat as plain if something went wrong
-                    normalized = core
-                else:
-                    normalized = ''.join(s_list)
+                normalized = ''.join(s_list) if ok and '' not in s_list else core
             else:
-                # unknown format: fallback to treating as plain (no-op)
                 normalized = core
 
-        # reattach sign if present
         result_str_canonical = (sign + normalized) if sign else normalized
-
         return operands_str, result_str_canonical
 
-    # If an unknown mode is passed
     print(f"Unknown mode: {mode}")
     return None, None, None
 
 _precomputed_batches = {}
-def prepare_addition_batches(config, encode, num_digit=3, data_type='binary', 
-                             operator='+', data_format='plain', add_space=False, mode: str = "compute_gold", batch_method: str = "per_example"):
+def prepare_addition_batches(config, encode, num_digit=3, operator='+', data_format='plain', 
+                             mode: str = "compute_gold", batch_method: str = "per_example"):
     device = config['device']
     test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
     start = config['start'] if 'start' in config.keys() else "FILE:prompt/prompt_addition_pad_test_0.01.txt"
@@ -163,6 +156,11 @@ def prepare_addition_batches(config, encode, num_digit=3, data_type='binary',
 
     total = len(lines)
     print(f'Preparing batches for {total} examples from: {start}')
+
+    if data_format == 'comparison':
+        delimiter = '#'
+    else:
+        delimiter = '='
     
     # Process all lines and group by prompt length
     prompt_dict = {}
@@ -170,9 +168,9 @@ def prepare_addition_batches(config, encode, num_digit=3, data_type='binary',
         # split off gold answer
         # e.g. line = "123+456=579"
         if batch_method == 'per_example':
-            prompt_str = line.split('=')[0] + '='  # keep the '=' at the end
+            prompt_str = line.split(delimiter)[0] + delimiter  # keep the delimiter at the end
         else:
-            prompt_str = '$' + line.split('=')[0] + '='      # "123+456="
+            prompt_str = '$' + line.split(delimiter)[0] + delimiter      # "123+456="
         prompt_ids = encode(prompt_str)
         x = torch.tensor(prompt_ids, dtype=torch.long, device=device)[None, ...]
         prompt_length = x.size(1)
@@ -198,22 +196,21 @@ def prepare_addition_batches(config, encode, num_digit=3, data_type='binary',
     
     # Cache the batches using a hash of the configuration
     config_hash = hash(frozenset({k: str(v) for k, v in config.items() if k != 'device'}.items()))
-    batch_key = f"{config_hash}_{data_type}_{operator}_{num_digit}_{data_format}_{add_space}"
+    batch_key = f"{config_hash}_{operator}_{num_digit}_{data_format}"
     _precomputed_batches[batch_key] = (batch_list, total)
     
     return batch_list, total
 
 # Modified evaluation function that uses pre-created batches
 def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
-                                  verbose=False, num_digit=3, data_format='plain', add_space=False, 
-                                  operator='+', verbose_correct=False, analyze=False, mode: str = "compute_gold", randomize=None):
+                                  verbose=False, num_digit=3, data_format='plain',operator='+', 
+                                  verbose_correct=False, mode: str = "compute_gold", randomize=None):
     """
     randomize: None | "units" | "tens" | "hundreds" | "thousands"
     If randomize is None: behave exactly as before.
     Otherwise: ignore the specified place when checking correctness (units = last digit).
     """
     model.eval()
-    device = config['device']
     max_new_tokens = config['max_new_tokens'] if 'max_new_tokens' in config.keys() else num_digit+2
     
     # base values from config
@@ -225,14 +222,14 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
         top_k = 1
         temperature = 0.0
 
-    if add_space:
-        max_new_tokens = 2 * num_digit + 3
-
     correct = 0
-
-    op = operator
     correct_examples = []
     incorrect_examples = []
+
+    if data_format == 'comparison':
+        delimiter = '#'
+    else:
+        delimiter = '='
 
     # helper to extract "digit-like" characters (keep digits and '?', which you use as mask)
     def extract_digits_allow_mask(s: str):
@@ -252,42 +249,44 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
     def reverse_string(s: str) -> str:
         return s[::-1]
 
-    def is_permutation_of_1_to_n(perm: str, n: int) -> bool:
-        if len(perm) != n:
+    def is_permutation_of_1_to_n(perm_spec: str, n: int) -> bool:
+        perm_list = parse_perm_spec(perm_spec)
+        if perm_list is None or len(perm_list) != n:
             return False
-        expected = {str(i) for i in range(1, n + 1)}
-        return set(perm) == expected
+        return set(perm_list) == set(range(1, n + 1))
 
-    def invert_permutation(core: str, perm: str) -> str:
+    def invert_permutation(core: str, perm_spec: str) -> str:
         """
-        Given core (string without sign) and perm like '2143' produced by generator
-        where permuted[j] = original[perm[j]-1], recover original.
-        If len(core) < len(perm), left-pad core with zeros to match length.
-        If perm malformed, return core unchanged.
+        permuted[j] = original[perm[j]-1]  -> recover original
+
+        Supports:
+        - "2143" (old style)
+        - "2 1 4 3" (space-separated)
+        - "11 10 ... 32" (multi-digit tokens)
         """
-        n = len(perm)
-        c = core
-        if len(c) < n:
-            # left-pad with zeros to support permutations that expect fixed width (e.g. 4 digits)
-            c = c.rjust(n, '0')
-        if len(c) != n:
-            # can't invert if lengths don't match after padding
+        perm_list = parse_perm_spec(perm_spec)
+        if perm_list is None:
             return core
 
-        if not is_permutation_of_1_to_n(perm, n):
+        n = len(perm_list)
+        c = core
+
+        if len(c) < n:
+            c = c.rjust(n, '0')
+        if len(c) != n:
+            return core
+
+        if set(perm_list) != set(range(1, n + 1)):
             return core
 
         s_list = [''] * n
         for j, ch in enumerate(c):
-            try:
-                target_idx = int(perm[j]) - 1
-            except Exception:
-                return core
+            target_idx = perm_list[j] - 1
             if 0 <= target_idx < n:
                 s_list[target_idx] = ch
             else:
                 return core
-        # If anything left blank, fallback
+
         if '' in s_list:
             return core
         return ''.join(s_list)
@@ -319,14 +318,8 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
         elif df in ("reverse", "reversed", "4321"):
             normalized_core = core[::-1]
         else:
-            # try to treat data_format as a permutation like '2143'
-            perm = data_format.strip()
-            # only attempt if perm is all digits
-            if perm.isdigit():
-                normalized_core = invert_permutation(core, perm)
-            else:
-                # unknown format -> fallback to plain
-                normalized_core = core
+            # NEW: attempt inversion for digits-only OR space-separated permutations
+            normalized_core = invert_permutation(core, str(data_format))
 
         # reattach sign if present
         return (sign + normalized_core) if sign else normalized_core
@@ -361,9 +354,6 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
                         # normalize according to data_format (reverse, permutation, etc.)
                         c_hat = normalize_by_data_format(c_hat, data_format)
 
-                        if add_space:
-                            c_hat = c_hat.replace(' ', '')
-
                         if is_number(c_hat):
                             if '.' in c_hat:
                                 c_hat = float(c_hat)
@@ -373,7 +363,7 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
                             result = str(result)
 
                     if mode == "read_gold_as_str":
-                        c_hat = outcome.split('=')[1].split('$')[0].strip()
+                        c_hat = outcome.split(delimiter)[1].split('$')[0].strip()
 
                         # normalize according to data_format (reverse, permutation, etc.)
                         c_hat = normalize_by_data_format(c_hat, data_format)
@@ -435,10 +425,10 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
 
 # Keep the original function for backward compatibility, but make it use the new functions
 def evaluate_addition_batch(config, model, ctx, encode, decode, verbose=False, num_digit=3,
-                          data_type='binary', operator='+', data_format='plain', add_space=False, verbose_correct=False,
-                          analyze=False, mode: str = "compute_gold", batch_method: str = "per_example", randomize=None):
+                          operator='+', data_format='plain', verbose_correct=False,
+                          mode: str = "compute_gold", batch_method: str = "per_example", randomize=None):
     config_hash = hash(frozenset({k: str(v) for k, v in config.items() if k != 'device'}.items()))
-    batch_key = f"{config_hash}_{data_type}_{operator}_{num_digit}_{data_format}_{add_space}"
+    batch_key = f"{config_hash}_{operator}_{num_digit}_{data_format}"
     
     if batch_key in _precomputed_batches:
         print("Using precomputed batches")
@@ -446,20 +436,20 @@ def evaluate_addition_batch(config, model, ctx, encode, decode, verbose=False, n
     else:
         print("Creating new batches")
         batch_list, total = prepare_addition_batches(
-            config, encode, num_digit=num_digit, 
-            data_type=data_type, operator=operator, data_format=data_format, add_space=add_space, mode=mode, batch_method=batch_method
+            config, encode, num_digit=num_digit, operator=operator, 
+            data_format=data_format, mode=mode, batch_method=batch_method
         )
 
     # Evaluate using the batches
     return evaluate_addition_precomputed(
         config, model, ctx, decode, batch_list, total, verbose=verbose,
         num_digit=num_digit, data_format=data_format,
-        add_space=add_space, operator=operator, verbose_correct=verbose_correct, analyze=analyze, mode=mode, randomize=randomize
+        operator=operator, verbose_correct=verbose_correct, mode=mode, randomize=randomize
     )
 
 def evaluate_multiple_files(config, model, ctx, encode, decode, test_files, iter_num, result_dir,
-                          verbose=False, num_digit=3, data_type='binary', operator='+', 
-                          data_format='plain', analyze=False, mode: str = "compute_gold", batch_method: str = "per_example", randomize=None):
+                          verbose=False, num_digit=3, operator='+', data_format='plain', 
+                          mode: str = "compute_gold", batch_method: str = "per_example", randomize=None):
     """
     Evaluate model on multiple test files and store results.
     Args:
@@ -488,8 +478,8 @@ def evaluate_multiple_files(config, model, ctx, encode, decode, test_files, iter
         accuracy, correct, incorrect = evaluate_addition_batch(
             config, model, ctx, encode=encode, decode=decode,
             verbose=verbose, num_digit=num_digit,
-            data_type=data_type, operator=operator,
-            data_format=data_format, analyze=analyze, mode=mode, batch_method=batch_method, randomize=randomize
+            operator=operator, data_format=data_format,
+            mode=mode, batch_method=batch_method, randomize=randomize
         )
 
         accuracy_multiple_files[test_name] = accuracy
@@ -502,12 +492,18 @@ def evaluate_multiple_files(config, model, ctx, encode, decode, test_files, iter
         # Combine correct and incorrect examples and sort by operands to maintain consistent order
         all_examples = correct + incorrect
         all_examples.sort(key=lambda x: x[0])  # Sort by operands
+
+        # Escape '=' to prevent CSV formula interpretation
+        def escape_equals(val):
+            if val == '=':
+                return "'="
+            return val
         
         # Create new DataFrame with operands and actual results
         new_df = pd.DataFrame({
             'operands': [ex[0] for ex in all_examples],
-            'actual': [ex[1] for ex in all_examples],
-            f'pred_iter_{iter_num}': [ex[3] for ex in all_examples]
+            'actual': [escape_equals(ex[1]) for ex in all_examples],
+            f'pred_iter_{iter_num}': [escape_equals(ex[3]) for ex in all_examples]
         })
         
             # --- before merging: ensure consistent types and remove duplicates ---

@@ -817,7 +817,7 @@ def get_token_probabilities_at_indices(
 
 #############################################################################
 
-def gen_stats_test(num_operands, size=50_000, min=0, max=999, reverse=False, digits_per_num=None, mask=False):
+def gen_stats_test(num_operands, size=1_000_000, min=0, max=999, reverse=False, digits_per_num=None, mask=False):
     """
     gen_tats_test generates a dataset (a list of addition expression strings)
     Arguments:

@@ -92,7 +92,7 @@ def main():
         sys.exit(2)
 
     # Read a small sample to detect delimiter
-    sample = input_path.read_text(4096, errors='ignore')
+    sample = input_path.read_text(errors='ignore')[:4096]
     delimiter = detect_delimiter(sample)
 
     # If user requested inplace, set output accordingly

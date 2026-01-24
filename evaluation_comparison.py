@@ -235,23 +235,7 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
                             print('outputs(x): ', outcome)
                             print(f'wrong  : {operands}={c_hat}')
                             print(f'correct: {operands}={result}')
-                    # Calculate metrics if analyzing
-                    if analyze:
-                        error_dict['y'].append(result)
-                        error_dict['y_hat'].append(c_hat)
-
-                        metric_types = ['mse', 'normalized_mse', 'digit_wise_difference', 'incorrect_digit_count']
-                        for metric_type in metric_types:
-                            error, list_not_num, list_outlier_num = get_error_metric(result, c_hat, metric_type, eps=config.get('eps', 0),
-                                                                                    list_not_num=list_not_num, list_outlier_num=list_outlier_num)
-                            error_dict[f'{metric_type}'].append(error)
-
-                        error, _, _ = get_error_metric(result, c_hat, 'accuracy', eps=0, list_not_num=list_not_num, list_outlier_num=list_outlier_num)
-                        error_dict[f'accuracy_eps0'].append(error * 100)
-                        error, _, _ = get_error_metric(result, c_hat, 'accuracy', eps=5e-4, list_not_num=list_not_num, list_outlier_num=list_outlier_num)
-                        error_dict[f'accuracy_eps5e-4'].append(error * 100)
-                        error, _, _ = get_error_metric(result, c_hat, 'accuracy', eps=5e-3, list_not_num=list_not_num, list_outlier_num=list_outlier_num)
-                        error_dict[f'accuracy_eps5e-3'].append(error * 100)
+                    
 
     accuracy = correct / total * 100
     print(f"accuracy of {total} examples: {correct}/{total} ({accuracy}%)")

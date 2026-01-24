@@ -11,8 +11,8 @@ and does NOT pad numbers with leading zeros.
 import random
 
 NUM_EXAMPLES = 1000
-OUT1 = "1_3_same_2_4_conflicting.txt"
-OUT2 = "1_3_same_2_4_agreeing.txt"
+OUT1 = "1_3_same_2_4_conflicting_v2.txt"
+OUT2 = "1_3_same_2_4_agreeing_v2.txt"
 
 def make_digits_file1():
     d1 = random.randint(1, 9)   # b1 == c1 in 1..9 (no leading zero)

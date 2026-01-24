@@ -36,12 +36,6 @@ max_new_tokens = 8
 
 drop_leading_digit = False
 
-<<<<<<< HEAD
-=======
-# whether need zero‐padding
-zero_pad = False
-
->>>>>>> my_addition/main
 # ===== Learning Rate Policy ===== #
 learning_rate = 1e-3
 
@@ -83,4 +77,5 @@ main_test_name = "test_reverse"
 # to edit: "compute_gold" or "read_gold_as_str"; read or compute groundtruth in evaluation data
 mode = "read_gold_as_str"
 
+# to edit: whether do mutual information tacking (addition supported only)
 mi_measurement = False
