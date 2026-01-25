@@ -7,7 +7,7 @@ Dispatches to individual generation scripts under /data_generation_script/indivi
 Usage:
     python data_generate.py --task <task> --num_operands <n> --experiment_name <name> \
         [--train_size N] [--test_size N] [--val_size N] \
-        [--train_eval] [--sample-size N] [--generate_reverse]
+        [--train_eval] [--sample-size N] [--generate_reverse] [--randomize {units,tens,hundreds,thousands}]
 
 Example:
     python data_generate.py --task addition --num_operands 4 --experiment_name 4_operands_0_to_999_uniform \
@@ -38,6 +38,8 @@ DEFAULT_TEST_SIZE = 10_000
 DEFAULT_VAL_SIZE = 10_000
 DEFAULT_SAMPLE_SIZE = 10_000
 
+RANDOMIZE_CHOICES = ("units", "tens", "hundreds", "thousands")
+
 TASK_MAP = {
     "addition": {
         "file": os.path.join("data_generation_script", "individual_task_scripts", "addition", "addition_gen.py"),
@@ -53,6 +55,11 @@ TASK_MAP = {
     "sorting": {
         "file": os.path.join("data_generation_script", "individual_task_scripts", "sorting", "doubly_bal_gen.py"),
         # set True/False depending on your sorting_gen implementation
+        "accepts_num_operands": False,
+        "generate_reverse": False,
+    },
+    "comparison": {
+        "file": os.path.join("data_generation_script", "individual_task_scripts", "comparison", "bal_gen.py"),
         "accepts_num_operands": False,
         "generate_reverse": False,
     },
@@ -86,6 +93,16 @@ def main():
         type=int,
         default=DEFAULT_NUM_OPERANDS,
         help="Number of operands (usually 2, 3, or 4).",
+    )
+
+    parser.add_argument(
+        "--randomize",
+        choices=RANDOMIZE_CHOICES,
+        default=None,
+        help=(
+            "Addition-only. If set, dispatches to addition_result_digit_randomized.py and randomizes "
+            "the chosen result digit (units/tens/hundreds/thousands)."
+        ),
     )
     parser.add_argument(
         "--experiment_name",
@@ -207,6 +224,10 @@ def main():
     experiment_name = args.experiment_name
 
     output_path = os.path.abspath(os.path.join(default_data_dir(), experiment_name))
+    is_comparison = (task == "comparison")
+    is_sorting = (task == "sorting")
+    needs_test_subdir = is_comparison or is_sorting
+    fixed_size_task = is_comparison or is_sorting
 
     # ensure output directory exists
     try:
@@ -220,8 +241,28 @@ def main():
         print(f"Unknown task: {task}", file=sys.stderr)
         sys.exit(2)
 
+    # Decide which generator script to call (addition can be overridden by --randomize)
+    addition_randomize = False
+    rel_script_path = entry["file"]
+
+    if args.randomize is not None:
+        if task != "addition":
+            print("Error: --randomize is only supported for --task addition.", file=sys.stderr)
+            sys.exit(2)
+        addition_randomize = True
+        rel_script_path = os.path.join(
+            "data_generation_script",
+            "individual_task_scripts",
+            "addition",
+            "addition_result_digit_randomized.py",
+        )
+        # That script is 4-operand fixed; avoid passing --num_operands to it and enforce 4 for safety.
+        if num_operands != 4:
+            print("Error: --randomize currently requires --num_operands 4 for addition.", file=sys.stderr)
+            sys.exit(2)
+
     # path to the generator script (relative to this file)
-    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), entry["file"])
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_script_path)
 
     if not os.path.exists(file_path):
         print(f"Generator script not found: {file_path}", file=sys.stderr)
@@ -233,16 +274,29 @@ def main():
         file_path,
     ]
 
-    if entry.get("accepts_num_operands", False):
+    # Only pass --num_operands to scripts that support it; randomized addition script does not.
+    if entry.get("accepts_num_operands", False) and not addition_randomize:
         gen_cmd += ["--num_operands", str(num_operands)]
 
-    # always pass the output dir and sizes
-    gen_cmd += [
-        "--output_dir", output_path,
-        "--train_size", str(args.train_size),
-        "--test_size", str(args.test_size),
-        "--val_size", str(args.val_size),
-    ]
+    # Output dir flag differs by task/script
+    if addition_randomize:
+        gen_cmd += ["--out-dir", output_path, "--mask-digit", args.randomize]
+    elif fixed_size_task:
+        gen_cmd += ["--outdir", output_path]
+    else:
+        gen_cmd += ["--output_dir", output_path]
+
+    # Sizes: pass to all tasks EXCEPT comparison & sorting (fixed sizes inside their scripts)
+    if not fixed_size_task:
+        gen_cmd += [
+            "--train_size", str(args.train_size),
+            "--test_size", str(args.test_size),
+            "--val_size", str(args.val_size),
+        ]
+    else:
+        # Optional clarity so users know flags are ignored
+        if (args.train_size != DEFAULT_TRAIN_SIZE) or (args.test_size != DEFAULT_TEST_SIZE) or (args.val_size != DEFAULT_VAL_SIZE):
+            print(f"Note: {task} task uses fixed sizes from its generator; ignoring --train_size/--test_size/--val_size.")
 
     if task == "multiplication":
         if args.a_probabilities is not None:
@@ -265,6 +319,25 @@ def main():
         sys.exit(1)
 
     print("Generation finished successfully.")
+
+    # For comparison and sorting: move test.txt into output_path/test/test.txt
+    if needs_test_subdir:
+        test_src = os.path.join(output_path, "test.txt")
+        test_dir = os.path.join(output_path, "test")
+        test_dst = os.path.join(test_dir, "test.txt")
+        try:
+            os.makedirs(test_dir, exist_ok=True)
+            if not os.path.exists(test_src):
+                print(f"Warning: expected test file not found: {test_src}", file=sys.stderr)
+            else:
+                # overwrite if exists
+                if os.path.exists(test_dst):
+                    os.remove(test_dst)
+                os.replace(test_src, test_dst)
+                print(f"Moved test set to: {test_dst}")
+        except Exception as e:
+            print(f"Failed to move comparison test file into subfolder: {e}", file=sys.stderr)
+            sys.exit(1)
 
     # If requested, run sample.py to create train_eval.txt from train.txt
     if args.train_eval:
