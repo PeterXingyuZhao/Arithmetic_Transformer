@@ -9,6 +9,8 @@ This version sorts the four numbers after '=' in ascending numeric order
 and does NOT pad numbers with leading zeros.
 """
 import random
+import argparse
+from pathlib import Path
 
 NUM_EXAMPLES = 1000
 OUT1 = "1_3_same_2_4_conflicting_v2.txt"
@@ -54,8 +56,9 @@ def make_digits_file2():
     c = f"{d1}{c2}{d3}{c4}"
     return b, c
 
-def write_examples(filename, maker_func, n):
-    with open(filename, "w", encoding="utf-8") as f:
+def write_examples(path: Path, maker_func, n):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
         for _ in range(n):
             b, c = maker_func()
             left = f"1000,{b},{c},9999"
@@ -66,11 +69,28 @@ def write_examples(filename, maker_func, n):
             line = f"{left}={right}$\n"
             f.write(line)
 
-def main():
-    random.seed()  # default seeding (system time)
-    write_examples(OUT1, make_digits_file1, NUM_EXAMPLES)
-    write_examples(OUT2, make_digits_file2, NUM_EXAMPLES)
-    print(f"Wrote {NUM_EXAMPLES} examples to '{OUT1}' and '{OUT2}'.")
+def main(out_dir=".", seed=None, n=NUM_EXAMPLES):
+    # Preserve prior behavior: if seed is omitted, use system time randomness.
+    if seed is None:
+        random.seed()
+    else:
+        random.seed(seed)
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    out1 = out_dir / OUT1
+    out2 = out_dir / OUT2
+    write_examples(out1, make_digits_file1, n)
+    write_examples(out2, make_digits_file2, n)
+    print(f"Wrote {n} examples to '{out1}' and '{out2}'.")
 
 if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(
+        description="Generate 2 sorting test files (digits 1 and 3 same between b and c)."
+    )
+    p.add_argument("--outdir", default=".", help="Output directory")
+    p.add_argument("--seed", type=int, default=None, help="Optional random seed for reproducibility")
+    p.add_argument("--n", type=int, default=NUM_EXAMPLES, help="Number of examples per file")
+    args = p.parse_args()
+    main(out_dir=args.outdir, seed=args.seed, n=args.n)

@@ -17,7 +17,9 @@ Usage examples:
 """
 import random
 import argparse
+import os
 from typing import Tuple
+
 
 def block_range_for_variant(variant: str) -> Tuple[int, int]:
     """
@@ -93,12 +95,26 @@ def main():
     parser.add_argument("--distinct", action="store_true",
                         help="force the 4 numbers in each example to be distinct (no duplicates)")
     parser.add_argument("--seed", type=int, default=None, help="RNG seed for reproducibility")
+
+    # Existing output filename argument (kept)
     parser.add_argument("--out", type=str, default="sorting_examples.txt",
                         help="output filename (default sorting_examples.txt)")
+
+    # NEW: optional output directory; if provided, file is written into this directory
+    parser.add_argument("--outdir", "--out_dir", "-o", type=str, default=None,
+                        help="output directory (optional). If set, --out is treated as a filename and will be placed in this directory.")
+
     args = parser.parse_args()
 
-    generate_examples(n=args.n, variant=args.variant, filename=args.out,
+    # Build final output path
+    out_path = args.out
+    if args.outdir:
+        os.makedirs(args.outdir, exist_ok=True)
+        out_path = os.path.join(args.outdir, os.path.basename(args.out))
+
+    generate_examples(n=args.n, variant=args.variant, filename=out_path,
                       seed=args.seed, allow_duplicates=not args.distinct)
+
 
 if __name__ == "__main__":
     main()

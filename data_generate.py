@@ -77,6 +77,10 @@ def run_subprocess(cmd):
     if proc.returncode != 0:
         raise RuntimeError(f"Command exited with code {proc.returncode}")
 
+def script_abs_path(rel_path: str) -> str:
+    """Resolve a repo-relative script path to an absolute path based on this file's directory."""
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -339,6 +343,147 @@ def main():
             print(f"Failed to move comparison test file into subfolder: {e}", file=sys.stderr)
             sys.exit(1)
 
+    # For comparison: generate additional single-digit-diff test files into output_path/test
+    if is_comparison:
+        extra_test_script_rel = os.path.join(
+            "data_generation_script",
+            "individual_task_scripts",
+            "comparison",
+            "single_digit_diff_test_gen.py",
+        )
+        extra_test_script = script_abs_path(extra_test_script_rel)
+
+        if not os.path.exists(extra_test_script):
+            print(f"Warning: extra comparison test generator not found: {extra_test_script}", file=sys.stderr)
+        else:
+            test_dir = os.path.join(output_path, "test")  # ensured created above
+            extra_cmd = [
+                sys.executable,
+                extra_test_script,
+                "--outdir",
+                test_dir,
+            ]
+            try:
+                print("Generating additional comparison tests (single-digit-diff) into:", test_dir)
+                run_subprocess(extra_cmd)
+            except RuntimeError as e:
+                print(f"Additional comparison test generation failed: {e}", file=sys.stderr)
+                sys.exit(1)
+
+    # For comparison: generate digitwise test files into output_path/test
+    if is_comparison:
+        digitwise_script_rel = os.path.join(
+            "data_generation_script",
+            "individual_task_scripts",
+            "comparison",
+            "digitwise_test_gen.py",
+        )
+        digitwise_script = script_abs_path(digitwise_script_rel)
+
+        if not os.path.exists(digitwise_script):
+            print(f"Warning: digitwise comparison test generator not found: {digitwise_script}", file=sys.stderr)
+        else:
+            test_dir = os.path.join(output_path, "test")  # ensured created above
+            digitwise_cmd = [
+                sys.executable,
+                digitwise_script,
+                "--outdir",
+                test_dir,
+            ]
+            try:
+                print("Generating additional comparison tests (digitwise) into:", test_dir)
+                run_subprocess(digitwise_cmd)
+            except RuntimeError as e:
+                print(f"Digitwise comparison test generation failed: {e}", file=sys.stderr)
+                sys.exit(1)
+
+    # For sorting: generate additional digitwise test files into output_path/test
+    if is_sorting:
+        sorting_digitwise_rel = os.path.join(
+            "data_generation_script",
+            "individual_task_scripts",
+            "sorting",
+            "digitwise_test_gen.py",
+        )
+        sorting_digitwise_script = script_abs_path(sorting_digitwise_rel)
+
+        if not os.path.exists(sorting_digitwise_script):
+            print(f"Warning: sorting digitwise test generator not found: {sorting_digitwise_script}", file=sys.stderr)
+        else:
+            test_dir = os.path.join(output_path, "test")  # ensured created above
+
+            # Map requested output names to the script's variants
+            variant_to_outfile = [
+                ("random", "digitwise_random.txt"),
+                ("thousands", "digitwise_thousand.txt"),
+                ("thousands_hundreds", "digitwise_hundred.txt"),
+                ("thousands_hundreds_tens", "digitwise_ten.txt"),
+            ]
+
+            try:
+                print("Generating additional sorting digitwise tests into:", test_dir)
+                for variant, fname in variant_to_outfile:
+                    out_path = os.path.join(test_dir, fname)
+                    cmd = [
+                        sys.executable,
+                        sorting_digitwise_script,
+                        "--variant", variant,
+                        "-n", "1000",                 # change to "3000" if you want the old default
+                        "--outdir", test_dir,          # ensures files land under test/
+                        "--out", fname,                # requested filename
+                    ]
+                    run_subprocess(cmd)
+            except RuntimeError as e:
+                print(f"Sorting digitwise test generation failed: {e}", file=sys.stderr)
+                sys.exit(1)
+
+    # For sorting: generate additional constraint-based test files into output_path/test
+    if is_sorting:
+        test_dir = os.path.join(output_path, "test")  # ensured created earlier
+
+        extra_sorting_scripts = [
+            os.path.join(
+                "data_generation_script",
+                "individual_task_scripts",
+                "sorting",
+                "conflicting_agreeing_digit_1_3_same.py",
+            ),
+            os.path.join(
+                "data_generation_script",
+                "individual_task_scripts",
+                "sorting",
+                "same_digit_control_with_conflicting_digit.py",
+            ),
+        ]
+
+        for rel in extra_sorting_scripts:
+            script_path = script_abs_path(rel)
+            if not os.path.exists(script_path):
+                print(
+                    f"Warning: extra sorting test generator not found: {script_path}",
+                    file=sys.stderr,
+                )
+                continue
+
+            cmd = [
+                sys.executable,
+                script_path,
+                "--outdir",
+                test_dir,
+                "--seed",
+                "42",
+                "--n",
+                "1000",
+            ]
+            try:
+                print("Generating additional sorting tests via:", rel)
+                run_subprocess(cmd)
+            except RuntimeError as e:
+                print(
+                    f"Additional sorting test generation failed ({os.path.basename(rel)}): {e}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
     # If requested, run sample.py to create train_eval.txt from train.txt
     if args.train_eval:
         sample_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_generation_script", "sample.py")

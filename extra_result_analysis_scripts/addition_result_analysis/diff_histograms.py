@@ -186,7 +186,7 @@ def build_histograms(
 
     # Build output DataFrame with two columns: difference, first_phase
     out_df = mean_series.reset_index()
-    out_df.columns = ["difference", "zero_phase"]
+    out_df.columns = ["difference", "avg_counts"]
 
     # Save output (difference as first column)
     out_df.to_csv(outfile, index=False)

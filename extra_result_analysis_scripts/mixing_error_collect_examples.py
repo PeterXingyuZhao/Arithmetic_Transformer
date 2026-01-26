@@ -12,12 +12,19 @@ Description:
       - swapping last two digits
       - repeating last digit
       - repeating last two digits
-    Plots counts vs iteration and saves 'errors_vs_iter.png'.
+
+    NEW OUTPUT METRICS (error rates, not raw counts):
+      - swap_error   = swap_last_digit + swap_last_two
+      - repeat_error = repeat_last_digit + repeat_last_two
+      - mixing_error = swap_error + repeat_error
+
+    Plots error rates vs iteration and saves 'errors_vs_iter.png'.
     Additionally collects examples that trigger each error type into four CSV files.
 
-    NEW: also creates separate PDF plots saved in the same directory as the input CSV:
-      - repeat_last_digit_vs_iter.pdf  (repeat error rate = count / 1000)
-      - swap_last_digit_vs_iter.pdf    (swap error rate = count / 1000)
+    Also creates separate PDF plots (error rates) saved in the same directory as the input CSV:
+      - repeat_error_vs_iter.pdf
+      - swap_error_vs_iter.pdf
+      - mixing_error_vs_iter.pdf
 
     At the top of the file you can change visualization options:
       XLABEL_FONTSIZE, YLABEL_FONTSIZE, LINE_WIDTH, MIN_ITER, MAX_ITER, TICK_FONTSIZE
@@ -126,6 +133,8 @@ def is_swap_last_two(A1, A2, P1, P2):
         return False
     if (A1 % 100) == (A2 % 100):
         return False
+    if (A1 % 100) // 10 == (A2 % 100) // 10:
+        return False
     # require first two digits (prefix of 2) match actuals
     if prefix_n(P1, 2) == prefix_n(A1, 2) and prefix_n(P2, 2) == prefix_n(A2, 2):
         if (P1 % 100 == (A2 % 100)) and (P2 % 100 == (A1 % 100)):
@@ -161,6 +170,8 @@ def is_repeat_last_two(A1, A2, P1, P2):
     if P1 == A1 and P2 == A2:
         return False
     if (A1 % 100) == (A2 % 100):
+        return False
+    if (A1 % 100) // 10 == (A2 % 100) // 10:
         return False
     # require first two digits match actuals
     if prefix_n(P1, 2) == prefix_n(A1, 2) and prefix_n(P2, 2) == prefix_n(A2, 2):
@@ -228,6 +239,9 @@ def main(csv_path='results.csv', out_png='errors_vs_iter.png'):
     repeat_last_counts = {it:0 for it in iter_sorted}
     repeat_last2_counts = {it:0 for it in iter_sorted}
 
+    # track how many examples we successfully normalize by
+    n_valid_examples = 0
+
     # collectors for examples
     swap_last_examples = []
     swap_last2_examples = []
@@ -242,6 +256,7 @@ def main(csv_path='results.csv', out_png='errors_vs_iter.png'):
             actual_parsed = parse_4nums(str(row[operands_col]))
             if actual_parsed is None:
                 continue
+        n_valid_examples += 1
         A1 = actual_parsed[1]
         A2 = actual_parsed[2]
 
@@ -304,31 +319,36 @@ def main(csv_path='results.csv', out_png='errors_vs_iter.png'):
                     'error_type': 'repeat_last_two'
                 })
 
-    # Prepare arrays for plotting (aligned with sorted iteration list)
-    xs = iter_sorted
-    swap_last_y = [swap_last_counts[it] for it in xs]
-    swap_last2_y = [swap_last2_counts[it] for it in xs]
-    repeat_last_y = [repeat_last_counts[it] for it in xs]
-    repeat_last2_y = [repeat_last2_counts[it] for it in xs]
+    if n_valid_examples == 0:
+        raise RuntimeError("No valid examples found to compute error rates (could not parse actual/operands).")
 
-    # Create a DataFrame of counts for inspection / saving
-    counts_df = pd.DataFrame({
+    # Prepare combined error counts
+    xs = iter_sorted
+    swap_error_counts   = [swap_last_counts[it] + swap_last2_counts[it] for it in xs]
+    repeat_error_counts = [repeat_last_counts[it] + repeat_last2_counts[it] for it in xs]
+    mixing_error_counts = [swap_error_counts[i] + repeat_error_counts[i] for i in range(len(xs))]
+
+    # Convert to error rates
+    swap_error_rate   = [c / float(n_valid_examples) for c in swap_error_counts]
+    repeat_error_rate = [c / float(n_valid_examples) for c in repeat_error_counts]
+    mixing_error_rate = [c / float(n_valid_examples) for c in mixing_error_counts]
+
+    # Create a DataFrame of error rates (NOT raw counts)
+    rates_df = pd.DataFrame({
         'iter': xs,
-        'swap_last_digit': swap_last_y,
-        'swap_last_two': swap_last2_y,
-        'repeat_last_digit': repeat_last_y,
-        'repeat_last_two': repeat_last2_y,
+        'swap_error': swap_error_rate,
+        'repeat_error': repeat_error_rate,
+        'mixing_error': mixing_error_rate,
     })
 
-    # Plot all four on a single figure (existing PNG behavior)
+    # Plot combined error rates on a single figure
     plt.figure(figsize=(10,6))
-    plt.plot(counts_df['iter'], counts_df['swap_last_digit'], marker='o', label='swap last digit')
-    plt.plot(counts_df['iter'], counts_df['swap_last_two'], marker='o', label='swap last two')
-    plt.plot(counts_df['iter'], counts_df['repeat_last_digit'], marker='o', label='repeat last digit')
-    plt.plot(counts_df['iter'], counts_df['repeat_last_two'], marker='o', label='repeat last two')
+    plt.plot(rates_df['iter'], rates_df['swap_error'], marker='o', label='swap_error')
+    plt.plot(rates_df['iter'], rates_df['repeat_error'], marker='o', label='repeat_error')
+    plt.plot(rates_df['iter'], rates_df['mixing_error'], marker='o', label='mixing_error')
     plt.xlabel('iteration')
-    plt.ylabel('count')
-    plt.title('Error counts vs iteration')
+    plt.ylabel('error rate')
+    plt.title('Error rates vs iteration')
     plt.grid(True)
     plt.legend()
     # apply tick font size for the main PNG plot
@@ -346,13 +366,13 @@ def main(csv_path='results.csv', out_png='errors_vs_iter.png'):
     xr_max = MAX_ITER
 
     if xr_min is None and xr_max is None:
-        mask = np.ones(len(counts_df), dtype=bool)
+        mask = np.ones(len(rates_df), dtype=bool)
     else:
         if xr_min is None:
-            xr_min = int(min(counts_df['iter']))
+            xr_min = int(min(rates_df['iter']))
         if xr_max is None:
-            xr_max = int(max(counts_df['iter']))
-        mask = (counts_df['iter'] >= xr_min) & (counts_df['iter'] <= xr_max)
+            xr_max = int(max(rates_df['iter']))
+        mask = (rates_df['iter'] >= xr_min) & (rates_df['iter'] <= xr_max)
 
     # If mask selects no rows, fall back to full range and warn
     if mask.sum() == 0:
@@ -360,22 +380,19 @@ def main(csv_path='results.csv', out_png='errors_vs_iter.png'):
         print("Warning: requested x range produced empty data. Falling back to full iteration range for PDF plots.")
 
     # shared plot data
-    plot_x = counts_df['iter'][mask].tolist()
-    plot_repeat_counts = counts_df['repeat_last_digit'][mask].tolist()
-    plot_swap_counts = counts_df['swap_last_digit'][mask].tolist()
-
-    # convert counts -> rate (divide by 1000)
-    plot_repeat_rate = [float(v) / 1000.0 for v in plot_repeat_counts]
-    plot_swap_rate = [float(v) / 1000.0 for v in plot_swap_counts]
+    plot_x = rates_df['iter'][mask].tolist()
+    plot_repeat_rate = rates_df['repeat_error'][mask].tolist()
+    plot_swap_rate   = rates_df['swap_error'][mask].tolist()
+    plot_mixing_rate = rates_df['mixing_error'][mask].tolist()
 
     # Save directory for PDFs
     csv_dir = os.path.dirname(os.path.abspath(csv_path))
 
-    # -- Repeat-last-digit rate plot --
+    # -- Repeat error rate plot --
     plt.figure(figsize=(8,5))
     plt.plot(plot_x, plot_repeat_rate, linewidth=LINE_WIDTH)
     plt.xlabel("Training steps", fontsize=XLABEL_FONTSIZE)
-    plt.ylabel("Repeating error rate", fontsize=YLABEL_FONTSIZE)
+    plt.ylabel("Repeat error rate", fontsize=YLABEL_FONTSIZE)
     # plt.title("Repeat-last-digit error rate vs Training steps")
     plt.grid(True)
     plt.tick_params(axis='both', which='major', labelsize=TICK_FONTSIZE)
@@ -392,15 +409,15 @@ def main(csv_path='results.csv', out_png='errors_vs_iter.png'):
     elif x1 is not None:
         plt.xlim(right=x1)
     plt.tight_layout()
-    repeat_pdf_path = os.path.join(csv_dir, "repeat_last_digit_vs_iter.pdf")
+    repeat_pdf_path = os.path.join(csv_dir, "repeat_error_vs_iter.pdf")
     plt.savefig(repeat_pdf_path)
-    print("Saved repeat_last_digit plot to", repeat_pdf_path)
+    print("Saved repeat_error plot to", repeat_pdf_path)
 
-    # -- Swap-last-digit rate plot --
+    # -- Swap error rate plot --
     plt.figure(figsize=(8,5))
     plt.plot(plot_x, plot_swap_rate, linewidth=LINE_WIDTH)
     plt.xlabel("Training steps", fontsize=XLABEL_FONTSIZE)
-    plt.ylabel("Swapping error rate", fontsize=YLABEL_FONTSIZE)
+    plt.ylabel("Swap error rate", fontsize=YLABEL_FONTSIZE)
     # plt.title("Swap-last-digit error rate vs Training steps")
     plt.grid(True)
     plt.tick_params(axis='both', which='major', labelsize=TICK_FONTSIZE)
@@ -417,9 +434,29 @@ def main(csv_path='results.csv', out_png='errors_vs_iter.png'):
     elif x1 is not None:
         plt.xlim(right=x1)
     plt.tight_layout()
-    swap_pdf_path = os.path.join(csv_dir, "swap_last_digit_vs_iter.pdf")
+    swap_pdf_path = os.path.join(csv_dir, "swap_error_vs_iter.pdf")
     plt.savefig(swap_pdf_path)
-    print("Saved swap_last_digit plot to", swap_pdf_path)
+    print("Saved swap_error plot to", swap_pdf_path)
+
+    # -- Mixing error rate plot --
+    plt.figure(figsize=(8,5))
+    plt.plot(plot_x, plot_mixing_rate, linewidth=LINE_WIDTH)
+    plt.xlabel("Training steps", fontsize=XLABEL_FONTSIZE)
+    plt.ylabel("Mixing error rate", fontsize=YLABEL_FONTSIZE)
+    plt.grid(True)
+    plt.tick_params(axis='both', which='major', labelsize=TICK_FONTSIZE)
+    x0 = MIN_ITER if MIN_ITER is not None else (plot_x[0] if len(plot_x) > 0 else None)
+    x1 = MAX_ITER if MAX_ITER is not None else (plot_x[-1] if len(plot_x) > 0 else None)
+    if x0 is not None and x1 is not None:
+        plt.xlim(x0-1, x1)
+    elif x0 is not None:
+        plt.xlim(left=x0-1)
+    elif x1 is not None:
+        plt.xlim(right=x1)
+    plt.tight_layout()
+    mixing_pdf_path = os.path.join(csv_dir, "mixing_error_vs_iter.pdf")
+    plt.savefig(mixing_pdf_path)
+    print("Saved mixing_error plot to", mixing_pdf_path)
 
     # Prepare output folder for example CSVs
     out_folder = "error_examples"
@@ -448,16 +485,34 @@ def main(csv_path='results.csv', out_png='errors_vs_iter.png'):
                "repeat_last_digit_examples.csv","repeat_last_two_examples.csv"]:
         print("  ", os.path.join(out_folder, nm))
 
-    # also print table
-    print("\nCounts table:")
-    print(counts_df.to_string(index=False))
+    # print error-rate table (no raw counts)
+    print(f"\nNormalized by {n_valid_examples} examples.")
+    print("\nError-rate table:")
+    print(rates_df.to_string(index=False))
+
+    # ------------------------------------------------------------
+    # Mixing-error statistics over the last 10 evaluated iterations
+    # (last 10 rows after sorting by iteration)
+    # ------------------------------------------------------------
+    last10 = rates_df.sort_values("iter").tail(10).reset_index(drop=True)
+    mean_mixing = float(last10["mixing_error"].mean())
+    # sample standard deviation (ddof=1). If fewer than 2 rows, std is NaN.
+    std_mixing = float(last10["mixing_error"].std(ddof=1))
+    it_min = int(last10["iter"].min()) if len(last10) else None
+    it_max = int(last10["iter"].max()) if len(last10) else None
+
+    print("\nMixing error statistics (last 10 evaluated iterations "
+          f"{it_min} to {it_max}):")
+    print(f"  mean(mixing_error) = {mean_mixing:.6f}")
+    print(f"  sample_std(mixing_error) = {std_mixing:.6f}")
 
     # return data for programmatic use
     return {
-        'counts_df': counts_df,
+        'rates_df': rates_df,
         'plot_path': out_png,
         'repeat_pdf': repeat_pdf_path,
         'swap_pdf': swap_pdf_path,
+        'mixing_pdf': mixing_pdf_path,
         'example_files': {
             'swap_last_digit': os.path.join(out_folder, "swap_last_digit_examples.csv"),
             'swap_last_two': os.path.join(out_folder, "swap_last_two_examples.csv"),
