@@ -1,0 +1,1818 @@
+model_id,model_alias,hf_repo,k,qnum,question_idx_in_k,question,ground_truth,response_text,predicted_str,predicted_val,is_correct,error
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,1,0,"Toulouse has 2 times as many sheep as Charleston. Charleston has 4 times as many sheep as Seattle. Seattle has 2 times as many sheep as Alice. How many sheep do Toulouse, Charleston, Seattle and Alice have together if Alice has 20 sheep?",540.0,"To determine the total number of sheep that Toulouse, Charleston, Seattle, and Alice have together, we start by defining the number of sheep each city has based on the information given.
+
+1. Let \( A \) be the number of sheep Alice has. According to the problem, Alice has 20 sheep.
+   \[
+   A = 20
+   \]
+
+2. Seattle has 2 times as many sheep as Alice. Therefore, the number of sheep Seattle has is:
+   \[
+   S = 2A = 2 \times 20 = 40
+   \]
+
+3. Charleston has 4 times as many sheep as Seattle. Therefore, the number of sheep Charleston has is:
+   \[
+   C = 4S = 4 \times 40 = 160
+   \]
+
+4. Toulouse has 2 times as many sheep as Charleston. Therefore, the number of sheep Toulouse has is:
+   \[
+   T = 2C = 2 \times 160 = 320
+   \]
+
+Now, we sum the number of sheep in all four cities:
+\[
+A + S + C + T = 20 + 40 + 160 + 320
+\]
+
+Adding these together step by step:
+\[
+20 + 40 = 60
+\]
+\[
+60 + 160 = 220
+\]
+\[
+220 + 320 = 540
+\]
+
+Thus, the total number of sheep that Toulouse, Charleston, Seattle, and Alice have together is:
+\[
+\boxed{540}
+\]",540,540.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,2,1,Billy sells DVDs. He has 8 customers on Tuesday. His first 3 customers buy one DVD each. His next 2 customers buy 2 DVDs each. His next 4 customers buy 3 DVDs each. His last 3 customers don't buy any DVDs. How many DVDs did Billy sell on Tuesday?,19.0,"To determine the total number of DVDs Billy sold on Tuesday, we need to calculate the number of DVDs bought by each group of customers and then sum these amounts.
+
+1. **First group of customers:**
+   - Billy has 3 customers.
+   - Each customer buys 1 DVD.
+   - Total DVDs bought by the first group: \(3 \times 1 = 3\).
+
+2. **Second group of customers:**
+   - Billy has 2 customers.
+   - Each customer buys 2 DVDs.
+   - Total DVDs bought by the second group: \(2 \times 2 = 4\).
+
+3. **Third group of customers:**
+   - Billy has 4 customers.
+   - Each customer buys 3 DVDs.
+   - Total DVDs bought by the third group: \(4 \times 3 = 12\).
+
+4. **Fourth group of customers:**
+   - Billy has 3 customers.
+   - Each customer buys 0 DVDs.
+   - Total DVDs bought by the fourth group: \(3 \times 0 = 0\).
+
+Now, we sum the total number of DVDs bought by all groups:
+\[
+3 + 4 + 12 + 0 = 19
+\]
+
+Therefore, the total number of DVDs Billy sold on Tuesday is \(\boxed{19}\).",19,19.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,3,2,"Mishka bought 3 pairs of shorts, 2 pairs of suspenders, 3 pairs of pants, and 3 pairs of shoes. One pair of shorts costs $16.50. One pair of suspenders costs $20.5. One pair of pants costs $22.50 and one pair of shoes costs $42. How many dollars did Mishka spend on all the clothing items?",284.0,"To determine the total amount of money Mishka spent on all the clothing items, we need to calculate the cost of each type of item separately and then sum these costs.
+
+First, let's calculate the cost of the shorts:
+Mishka bought 3 pairs of shorts, and each pair costs $16.50.
+\[
+3 \times 16.50 = 49.50
+\]
+So, the total cost of the shorts is $49.50.
+
+Next, let's calculate the cost of the suspenders:
+Mishka bought 2 pairs of suspenders, and each pair costs $20.50.
+\[
+2 \times 20.50 = 41.00
+\]
+So, the total cost of the suspenders is $41.00.
+
+Now, let's calculate the cost of the pants:
+Mishka bought 3 pairs of pants, and each pair costs $22.50.
+\[
+3 \times 22.50 = 67.50
+\]
+So, the total cost of the pants is $67.50.
+
+Finally, let's calculate the cost of the shoes:
+Mishka bought 3 pairs of shoes, and each pair costs $42.
+\[
+3 \times 42 = 126.00
+\]
+So, the total cost of the shoes is $126.00.
+
+Now, we sum the costs of all the items:
+\[
+49.50 + 41.00 + 67.50 + 126.00 = 284.00
+\]
+So, the total amount of money Mishka spent on all the clothing items is \boxed{284}.",284,284.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,4,3,For each inch of rain he collects 15.0 gallons. On Monday it rained 4 inches and on Tuesday it rained 3 inches. On Wednesday it rained 2 inches. He can sell water for $1.2 per gallon. How much money did he make from selling all the water?,162.0,"To determine how much money he made from selling all the water, we need to follow these steps:
+
+1. Calculate the total amount of water collected over the three days.
+2. Determine the total revenue from selling the water.
+
+**Step 1: Calculate the total amount of water collected.**
+
+- On Monday, it rained 4 inches. Since he collects 15.0 gallons per inch, the amount of water collected on Monday is:
+  \[
+  4 \text{ inches} \times 15.0 \text{ gallons/inch} = 60 \text{ gallons}
+  \]
+
+- On Tuesday, it rained 3 inches. The amount of water collected on Tuesday is:
+  \[
+  3 \text{ inches} \times 15.0 \text{ gallons/inch} = 45 \text{ gallons}
+  \]
+
+- On Wednesday, it rained 2 inches. The amount of water collected on Wednesday is:
+  \[
+  2 \text{ inches} \times 15.0 \text{ gallons/inch} = 30 \text{ gallons}
+  \]
+
+- The total amount of water collected over the three days is:
+  \[
+  60 \text{ gallons} + 45 \text{ gallons} + 30 \text{ gallons} = 135 \text{ gallons}
+  \]
+
+**Step 2: Determine the total revenue from selling the water.**
+
+- He can sell water for $1.2 per gallon. Therefore, the total revenue from selling 135 gallons is:
+  \[
+  135 \text{ gallons} \times 1.2 \text{ dollars/gallon} = 162 \text{ dollars}
+  \]
+
+The final answer is:
+\[
+\boxed{162}
+\]",162,162.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,5,4,"For every 1 minute that Carlotta sings on stage during the final opera performance, she spends an additional 3 minutes practicing and 5 minutes throwing temper tantrums. She also spends 1 minutes warm-up for each minute singing. If her final stage performance is 6 minutes long, what is the total combined amount of time, in minutes, that she spends practicing, throwing tantrums, singing and warm-up in the final stage performance?",60.0,"To determine the total combined amount of time Carlotta spends practicing, throwing tantrums, singing, and warm-up in the final stage performance, we need to break down the problem step by step.
+
+1. **Calculate the time spent singing:**
+   Carlotta's final stage performance is 6 minutes long.
+   \[
+   \text{Time spent singing} = 6 \text{ minutes}
+   \]
+
+2. **Calculate the time spent practicing:**
+   For every 1 minute of singing, Carlotta spends 3 minutes practicing.
+   \[
+   \text{Time spent practicing} = 6 \text{ minutes} \times 3 = 18 \text{ minutes}
+   \]
+
+3. **Calculate the time spent throwing temper tantrums:**
+   For every 1 minute of singing, Carlotta spends 5 minutes throwing temper tantrums.
+   \[
+   \text{Time spent throwing temper tantrums} = 6 \text{ minutes} \times 5 = 30 \text{ minutes}
+   \]
+
+4. **Calculate the time spent warm-up:**
+   Carlotta spends 1 minute warm-up for each minute of singing.
+   \[
+   \text{Time spent warm-up} = 6 \text{ minutes} \times 1 = 6 \text{ minutes}
+   \]
+
+5. **Calculate the total combined time:**
+   Add up the time spent singing, practicing, throwing temper tantrums, and warm-up.
+   \[
+   \text{Total combined time} = 6 \text{ minutes} + 18 \text{ minutes} + 30 \text{ minutes} + 6 \text{ minutes} = 60 \text{ minutes}
+   \]
+
+Therefore, the total combined amount of time Carlotta spends practicing, throwing tantrums, singing, and warm-up in the final stage performance is \(\boxed{60}\).",60,60.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,6,5,"Holly needs to take 2 insulin pills per day, 3 blood pressure pills per day, and twice as many anticonvulsants as blood pressure pills each day. She also takes as many vitamin C as insulin pills each day. How many pills does Holly take in a week?",91.0,"To determine the total number of pills Holly takes in a week, we need to calculate the daily total for each type of pill and then multiply by 7 (the number of days in a week).
+
+1. **Insulin Pills:**
+   Holly takes 2 insulin pills per day.
+   \[
+   2 \text{ pills/day} \times 7 \text{ days/week} = 14 \text{ pills/week}
+   \]
+
+2. **Blood Pressure Pills:**
+   Holly takes 3 blood pressure pills per day.
+   \[
+   3 \text{ pills/day} \times 7 \text{ days/week} = 21 \text{ pills/week}
+   \]
+
+3. **Anticonvulsants:**
+   Holly takes twice as many anticonvulsants as blood pressure pills each day. Since she takes 3 blood pressure pills per day:
+   \[
+   2 \times 3 \text{ pills/day} = 6 \text{ pills/day}
+   \]
+   Therefore, the total number of anticonvulsants she takes in a week is:
+   \[
+   6 \text{ pills/day} \times 7 \text{ days/week} = 42 \text{ pills/week}
+   \]
+
+4. **Vitamin C:**
+   Holly takes as many vitamin C as insulin pills each day. Since she takes 2 insulin pills per day:
+   \[
+   2 \text{ pills/day} \times 7 \text{ days/week} = 14 \text{ pills/week}
+   \]
+
+Next, we sum up the total number of pills for all types:
+\[
+14 \text{ insulin pills/week} + 21 \text{ blood pressure pills/week} + 42 \text{ anticonvulsants/week} + 14 \text{ vitamin C/week} = 91 \text{ pills/week}
+\]
+
+Thus, the total number of pills Holly takes in a week is:
+\[
+\boxed{91}
+\]",91,91.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,7,6,"MIlle is making snack packs for her kindergarten class. She's going to divide 64 pretzels, four times as many goldfish, 32 suckers, 32 granola bars into baggies for the 16 kids in the class. How many items does each baggie have?",24.0,"To determine how many items each baggie has, we need to follow these steps:
+
+1. Calculate the total number of each type of snack.
+2. Find the total number of all snacks combined.
+3. Divide the total number of snacks by the number of kids in the class.
+
+**Step 1: Calculate the total number of each type of snack.**
+
+- Pretzels: There are 64 pretzels.
+- Goldfish: There are four times as many goldfish as pretzels. So, the number of goldfish is \(4 \times 64 = 256\).
+- Suckers: There are 32 suckers.
+- Granola bars: There are 32 granola bars.
+
+**Step 2: Find the total number of all snacks combined.**
+
+Add the number of each type of snack together:
+\[64 + 256 + 32 + 32 = 384\]
+
+**Step 3: Divide the total number of snacks by the number of kids in the class.**
+
+There are 16 kids in the class, so we divide the total number of snacks by 16:
+\[384 \div 16 = 24\]
+
+Therefore, each baggie has \(\boxed{24}\) items.",24,24.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,8,7,"Ed, Jacob and Maya already had 2 shells in their shell collection. Then they went to the beach to collect even more. Ed found 7 limpet shells, 2 oyster shells, and 4 conch shells. Jacob found 2 more shells than Ed did. Maya found 12 fewer than Jacob. How many shells do they have altogether?",33.0,"To determine the total number of shells Ed, Jacob, and Maya have altogether, we need to follow these steps:
+
+1. **Initial Collection:**
+   Ed, Jacob, and Maya already had 2 shells in their collection.
+
+2. **Shells Found by Ed:**
+   - Ed found 7 limpet shells.
+   - Ed found 2 oyster shells.
+   - Ed found 4 conch shells.
+   - Total shells found by Ed:
+     \[
+     7 + 2 + 4 = 13
+     \]
+
+3. **Shells Found by Jacob:**
+   Jacob found 2 more shells than Ed.
+   - Shells found by Jacob:
+     \[
+     13 + 2 = 15
+     \]
+
+4. **Shells Found by Maya:**
+   Maya found 12 fewer shells than Jacob.
+   - Shells found by Maya:
+     \[
+     15 - 12 = 3
+     \]
+
+5. **Total Shells Collected by All Three:**
+   - Initial collection: 2 shells.
+   - Shells found by Ed: 13 shells.
+   - Shells found by Jacob: 15 shells.
+   - Shells found by Maya: 3 shells.
+   - Total shells:
+     \[
+     2 + 13 + 15 + 3 = 33
+     \]
+
+Therefore, the total number of shells they have altogether is \(\boxed{33}\).",33,33.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,9,8,"Marla is planning the lunch menu for an elementary school. There are 5 third grade classes with 30 students each, 4 fourth grade classes with 28 students each, and 4 fifth grade classes with 27 students each. Each student gets a hamburger, which costs $2.10, some carrots, which cost $0.50, and a cookie, which cost $0.20. Each student also gets apple, which costs $0.3. How much does one lunch for all the students cost?",1147.0,"To determine the total cost of lunch for all the students, we need to follow these steps:
+
+1. Calculate the total number of students in each grade.
+2. Sum the total number of students from all grades.
+3. Determine the cost of lunch for one student.
+4. Multiply the total number of students by the cost of lunch for one student.
+
+**Step 1: Calculate the total number of students in each grade.**
+
+- Third grade: \(5 \text{ classes} \times 30 \text{ students per class} = 150 \text{ students}\)
+- Fourth grade: \(4 \text{ classes} \times 28 \text{ students per class} = 112 \text{ students}\)
+- Fifth grade: \(4 \text{ classes} \times 27 \text{ students per class} = 108 \text{ students}\)
+
+**Step 2: Sum the total number of students from all grades.**
+
+\[150 \text{ students} + 112 \text{ students} + 108 \text{ students} = 370 \text{ students}\]
+
+**Step 3: Determine the cost of lunch for one student.**
+
+The cost of lunch for one student is the sum of the costs of the hamburger, carrots, cookie, and apple:
+\[2.10 + 0.50 + 0.20 + 0.30 = 3.10 \text{ dollars}\]
+
+**Step 4: Multiply the total number of students by the cost of lunch for one student.**
+
+\[370 \text{ students} \times 3.10 \text{ dollars per student} = 1147 \text{ dollars}\]
+
+Therefore, the total cost of lunch for all the students is \(\boxed{1147}\).",1147,1147.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,10,9,"With one mighty blow, Maria cracked open the pinata, and candies spilled all over the floor. There were 40 red candies, 20 less than three times as many yellow candies as red candies, and half as many blue candies as yellow candies. There were also half as many green candies as red candies. If Carlos ate all of the yellow candies, how many candies remained?",110.0,"To determine the total number of candies remaining after Carlos ate all the yellow candies, we need to calculate the number of each color of candy and then subtract the number of yellow candies from the total.
+
+1. **Red Candies:**
+   Maria has 40 red candies.
+
+2. **Yellow Candies:**
+   There are 20 less than three times as many yellow candies as red candies.
+   \[
+   \text{Yellow candies} = 3 \times \text{Red candies} - 20
+   \]
+   Substituting the number of red candies:
+   \[
+   \text{Yellow candies} = 3 \times 40 - 20 = 120 - 20 = 100
+   \]
+
+3. **Blue Candies:**
+   There are half as many blue candies as yellow candies.
+   \[
+   \text{Blue candies} = \frac{\text{Yellow candies}}{2}
+   \]
+   Substituting the number of yellow candies:
+   \[
+   \text{Blue candies} = \frac{100}{2} = 50
+   \]
+
+4. **Green Candies:**
+   There are half as many green candies as red candies.
+   \[
+   \text{Green candies} = \frac{\text{Red candies}}{2}
+   \]
+   Substituting the number of red candies:
+   \[
+   \text{Green candies} = \frac{40}{2} = 20
+   \]
+
+5. **Total Candies:**
+   Add up all the candies:
+   \[
+   \text{Total candies} = \text{Red candies} + \text{Yellow candies} + \text{Blue candies} + \text{Green candies}
+   \]
+   Substituting the values:
+   \[
+   \text{Total candies} = 40 + 100 + 50 + 20 = 210
+   \]
+
+6. **Candies Remaining:**
+   Carlos ate all the yellow candies, so subtract the number of yellow candies from the total:
+   \[
+   \text{Candies remaining} = \text{Total candies} - \text{Yellow candies}
+   \]
+   Substituting the values:
+   \[
+   \text{Candies remaining} = 210 - 100 = 110
+   \]
+
+Thus, the number of candies remaining is \(\boxed{110}\).",110,110.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,11,10,"The living room walls take up 600 square feet. The bedroom walls (each) take up 400 square feet and there are 3 of them. The kitchen walls (each) take up 500 square feet and there are 6 of them. If one gallon of paint covers 600 square feet, how many gallons of paint does Henrietta need to paint her house?",8.0,"To determine how many gallons of paint Henrietta needs to paint her house, we need to calculate the total area of all the walls and then divide that by the coverage of one gallon of paint.
+
+First, let's calculate the area of the living room walls:
+\[
+\text{Living room walls} = 600 \text{ square feet}
+\]
+
+Next, let's calculate the total area of the bedroom walls. Since there are 3 bedroom walls and each wall takes up 400 square feet:
+\[
+\text{Bedroom walls} = 3 \times 400 = 1200 \text{ square feet}
+\]
+
+Then, let's calculate the total area of the kitchen walls. Since there are 6 kitchen walls and each wall takes up 500 square feet:
+\[
+\text{Kitchen walls} = 6 \times 500 = 3000 \text{ square feet}
+\]
+
+Now, let's add up the areas of all the walls to find the total area of the house:
+\[
+\text{Total area} = \text{Living room walls} + \text{Bedroom walls} + \text{Kitchen walls} = 600 + 1200 + 3000 = 4800 \text{ square feet}
+\]
+
+Since one gallon of paint covers 600 square feet, we need to divide the total area by the coverage of one gallon to find out how many gallons of paint are needed:
+\[
+\text{Gallons of paint} = \frac{\text{Total area}}{\text{Coverage per gallon}} = \frac{4800}{600} = 8
+\]
+
+Therefore, Henrietta needs \boxed{8} gallons of paint to paint her house.",8,8.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,12,11,The club charges $20 to enter. James buys 2 rounds for his 5 friends. He also buys 6 drinks for himself. Drinks cost $6 each. He decides to eat some food so he orders fried chicken which costs $14. He also orders 2 nachos at $8.0 each. He leaves a 30% tip on everything he orders. How much did he spend for the night?,183.8,"To determine how much James spent for the night, we need to break down the costs step by step.
+
+1. **Entry Fee:**
+   James pays $20 to enter the club.
+
+2. **Cost of Drinks for Friends:**
+   James buys 2 rounds of drinks for his 5 friends. Since each round consists of 5 drinks (one for each friend), he buys a total of:
+   \[
+   2 \times 5 = 10 \text{ drinks}
+   \]
+   Each drink costs $6, so the total cost for the drinks for his friends is:
+   \[
+   10 \times 6 = 60 \text{ dollars}
+   \]
+
+3. **Cost of Drinks for James:**
+   James buys 6 drinks for himself. Each drink costs $6, so the total cost for the drinks for himself is:
+   \[
+   6 \times 6 = 36 \text{ dollars}
+   \]
+
+4. **Cost of Fried Chicken:**
+   James orders fried chicken which costs $14.
+
+5. **Cost of Nachos:**
+   James orders 2 nachos, each costing $8.0, so the total cost for the nachos is:
+   \[
+   2 \times 8 = 16 \text{ dollars}
+   \]
+
+6. **Subtotal Before Tip:**
+   We add up all the costs before the tip:
+   \[
+   20 + 60 + 36 + 14 + 16 = 146 \text{ dollars}
+   \]
+
+7. **Tip:**
+   James leaves a 30% tip on everything he orders. To find the tip, we calculate 30% of $146:
+   \[
+   0.30 \times 146 = 43.80 \text{ dollars}
+   \]
+
+8. **Total Cost:**
+   Finally, we add the tip to the subtotal to find the total amount James spent:
+   \[
+   146 + 43.80 = 189.80 \text{ dollars}
+   \]
+
+Therefore, the total amount James spent for the night is:
+\[
+\boxed{189.80}
+\]",189.80,189.8,False,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,13,12,"The Franzia wine is three times as old as the Carlo Rosi, and the Carlo Rosi is four times as old as the Twin Valley. The Silver Ridge is the same age as the Franzia. If the Carlo Rosi is 40 years old, what is the total age of all the listed wines?",290.0,"To determine the total age of all the listed wines, we need to find the age of each wine based on the given relationships and then sum these ages.
+
+1. **Determine the age of the Carlo Rosi:**
+   The problem states that the Carlo Rosi is 40 years old.
+   \[
+   \text{Age of Carlo Rosi} = 40
+   \]
+
+2. **Determine the age of the Twin Valley:**
+   The problem states that the Carlo Rosi is four times as old as the Twin Valley. Therefore, we can find the age of the Twin Valley by dividing the age of the Carlo Rosi by 4.
+   \[
+   \text{Age of Twin Valley} = \frac{\text{Age of Carlo Rosi}}{4} = \frac{40}{4} = 10
+   \]
+
+3. **Determine the age of the Franzia:**
+   The problem states that the Franzia is three times as old as the Carlo Rosi. Therefore, we can find the age of the Franzia by multiplying the age of the Carlo Rosi by 3.
+   \[
+   \text{Age of Franzia} = 3 \times \text{Age of Carlo Rosi} = 3 \times 40 = 120
+   \]
+
+4. **Determine the age of the Silver Ridge:**
+   The problem states that the Silver Ridge is the same age as the Franzia. Therefore, the age of the Silver Ridge is the same as the age of the Franzia.
+   \[
+   \text{Age of Silver Ridge} = \text{Age of Franzia} = 120
+   \]
+
+5. **Calculate the total age of all the listed wines:**
+   We add the ages of the Carlo Rosi, the Twin Valley, the Franzia, and the Silver Ridge.
+   \[
+   \text{Total age} = \text{Age of Carlo Rosi} + \text{Age of Twin Valley} + \text{Age of Franzia} + \text{Age of Silver Ridge} = 40 + 10 + 120 + 120 = 290
+   \]
+
+The total age of all the listed wines is \(\boxed{290}\).",290,290.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,14,13,"There are 12 carpets in house 1, 20 carpets in house 2, and 10 carpets in house 3. House 4 has twice as many carpets as house 3. House 5 has 8 carpets. How many carpets do all the houses have in total?",70.0,"To determine the total number of carpets in all the houses, we need to calculate the number of carpets in each house and then sum them up.
+
+1. **House 1**: It has 12 carpets.
+2. **House 2**: It has 20 carpets.
+3. **House 3**: It has 10 carpets.
+4. **House 4**: It has twice as many carpets as House 3. Since House 3 has 10 carpets, House 4 has \(2 \times 10 = 20\) carpets.
+5. **House 5**: It has 8 carpets.
+
+Now, we add the number of carpets in all the houses together:
+\[
+12 + 20 + 10 + 20 + 8
+\]
+
+We can add these step by step:
+\[
+12 + 20 = 32
+\]
+\[
+32 + 10 = 42
+\]
+\[
+42 + 20 = 62
+\]
+\[
+62 + 8 = 70
+\]
+
+Therefore, the total number of carpets in all the houses is \(\boxed{70}\).",70,70.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,15,14,"Josie and her family went on a safari and had an exciting time watching different animals grazing and playing together. She decided to count each animal she saw and calculated their total number. She counted 80 antelopes, 34 more rabbits than antelopes, 42 fewer hyenas than the total number of antelopes and rabbits combined, 50 more wild dogs than hyenas, and the number of leopards was half the number of rabbits. There were also twice as many zebras as leopards. What is the total number of animals that Josie counted?",719.0,"To determine the total number of animals Josie counted, we need to calculate the number of each type of animal step by step and then sum them up.
+
+1. **Antelopes**: Josie counted 80 antelopes.
+   \[
+   \text{Antelopes} = 80
+   \]
+
+2. **Rabbits**: Josie counted 34 more rabbits than antelopes.
+   \[
+   \text{Rabbits} = 80 + 34 = 114
+   \]
+
+3. **Hyenas**: Josie counted 42 fewer hyenas than the total number of antelopes and rabbits combined.
+   \[
+   \text{Total number of antelopes and rabbits} = 80 + 114 = 194
+   \]
+   \[
+   \text{Hyenas} = 194 - 42 = 152
+   \]
+
+4. **Wild dogs**: Josie counted 50 more wild dogs than hyenas.
+   \[
+   \text{Wild dogs} = 152 + 50 = 202
+   \]
+
+5. **Leopards**: Josie counted half the number of rabbits.
+   \[
+   \text{Leopards} = \frac{114}{2} = 57
+   \]
+
+6. **Zebras**: Josie counted twice as many zebras as leopards.
+   \[
+   \text{Zebras} = 2 \times 57 = 114
+   \]
+
+Now, we sum up the number of each type of animal to find the total number of animals Josie counted.
+\[
+\text{Total number of animals} = \text{Antelopes} + \text{Rabbits} + \text{Hyenas} + \text{Wild dogs} + \text{Leopards} + \text{Zebras}
+\]
+\[
+\text{Total number of animals} = 80 + 114 + 152 + 202 + 57 + 114
+\]
+
+Let's add these step by step:
+\[
+80 + 114 = 194
+\]
+\[
+194 + 152 = 346
+\]
+\[
+346 + 202 = 548
+\]
+\[
+548 + 57 = 605
+\]
+\[
+605 + 114 = 719
+\]
+
+Therefore, the total number of animals Josie counted is \(\boxed{719}\).",719,719.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,16,15,Micah has 7 fish in his aquarium. Kenneth has three times as many fish in his aquarium and Matthias has 15 fewer fish than Kenneth in his aquarium. Noah has 7 times as many fish as Micah in his aquarium. How many fish do they have in total?,83.0,"To determine the total number of fish that Micah, Kenneth, Matthias, and Noah have, we need to calculate the number of fish each person has and then sum these amounts.
+
+1. **Micah's Fish:**
+   Micah has 7 fish.
+
+2. **Kenneth's Fish:**
+   Kenneth has three times as many fish as Micah.
+   \[
+   3 \times 7 = 21
+   \]
+   So, Kenneth has 21 fish.
+
+3. **Matthias's Fish:**
+   Matthias has 15 fewer fish than Kenneth.
+   \[
+   21 - 15 = 6
+   \]
+   So, Matthias has 6 fish.
+
+4. **Noah's Fish:**
+   Noah has 7 times as many fish as Micah.
+   \[
+   7 \times 7 = 49
+   \]
+   So, Noah has 49 fish.
+
+5. **Total Fish:**
+   To find the total number of fish, we add the number of fish each person has:
+   \[
+   7 + 21 + 6 + 49
+   \]
+
+   Let's add these step by step:
+   \[
+   7 + 21 = 28
+   \]
+   \[
+   28 + 6 = 34
+   \]
+   \[
+   34 + 49 = 83
+   \]
+
+Therefore, the total number of fish they have is \(\boxed{83}\).",83,83.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,17,16,"With 40 seconds left the Dunkinville Hornets were leading the Fredingo Fireflies by a score of 86 to 74. In the last 40 seconds, Fireflies scored 2 three-point baskets while Hornets scored 1 two-point baskets. How many more points did the Fireflies score in the game than did the Hornets?",-8.0,"To determine how many more points the Fredingo Fireflies scored in the game than the Dunkinville Hornets, we need to follow these steps:
+
+1. **Initial Scores:**
+   - Dunkinville Hornets: 86 points
+   - Fredingo Fireflies: 74 points
+
+2. **Points Scored in the Last 40 Seconds:**
+   - Fireflies scored 2 three-point baskets.
+     - Each three-point basket is worth 3 points.
+     - Total points scored by Fireflies: \(2 \times 3 = 6\) points.
+   - Hornets scored 1 two-point basket.
+     - Each two-point basket is worth 2 points.
+     - Total points scored by Hornets: \(1 \times 2 = 2\) points.
+
+3. **Final Scores:**
+   - Dunkinville Hornets: \(86 + 2 = 88\) points
+   - Fredingo Fireflies: \(74 + 6 = 80\) points
+
+4. **Difference in Final Scores:**
+   - To find out how many more points the Fireflies scored than the Hornets, subtract the final score of the Hornets from the final score of the Fireflies.
+   - Difference: \(80 - 88 = -8\)
+
+Since the question asks how many more points the Fireflies scored in the game than the Hornets, and the result is negative, it means the Hornets actually scored more points. However, if we consider the absolute difference, it is 8 points.
+
+Thus, the final answer is:
+\[
+\boxed{8}
+\]",8,8.0,TRUE (manually changed to true, since it is semantically correct),
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,18,17,"A jewelry store is restocking its shelves. The necklace stand, which can hold 12 necklaces, currently holds 5 necklaces. The ring display, which can hold 30 rings, currently holds 18 rings. The bracelet display, which can hold 15 bracelets, currently holds 8 bracelets. The watch display, which can hold 20 watchs, currently holds 7 watchs. The supplier charges $4 per necklace, $10 per ring, $5 per bracelet, and $25 per watch. How much, in dollars, will the store need to pay to fill the displays?",508.0,"To determine how much the jewelry store will need to pay to fill the displays, we need to calculate the number of each type of jewelry required and then multiply by the cost per item.
+
+First, let's calculate the number of necklaces needed:
+- The necklace stand can hold 12 necklaces.
+- It currently holds 5 necklaces.
+- Therefore, the number of necklaces needed is \(12 - 5 = 7\).
+
+Next, let's calculate the number of rings needed:
+- The ring display can hold 30 rings.
+- It currently holds 18 rings.
+- Therefore, the number of rings needed is \(30 - 18 = 12\).
+
+Then, let's calculate the number of bracelets needed:
+- The bracelet display can hold 15 bracelets.
+- It currently holds 8 bracelets.
+- Therefore, the number of bracelets needed is \(15 - 8 = 7\).
+
+Finally, let's calculate the number of watches needed:
+- The watch display can hold 20 watches.
+- It currently holds 7 watches.
+- Therefore, the number of watches needed is \(20 - 7 = 13\).
+
+Now, let's calculate the total cost for each type of jewelry:
+- The cost for necklaces is \(7 \text{ necklaces} \times \$4 \text{ per necklace} = \$28\).
+- The cost for rings is \(12 \text{ rings} \times \$10 \text{ per ring} = \$120\).
+- The cost for bracelets is \(7 \text{ bracelets} \times \$5 \text{ per bracelet} = \$35\).
+- The cost for watches is \(13 \text{ watches} \times \$25 \text{ per watch} = \$325\).
+
+Adding these costs together gives the total amount the store will need to pay:
+\[
+\$28 + \$120 + \$35 + \$325 = \$408
+\]
+
+Therefore, the store will need to pay \(\boxed{408}\) dollars to fill the displays.",408,408.0,False,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,19,18,"From Monday to Friday, Mary collected twice as many red marbles as Jenny and half the number of blue marbles collected by Anie, who collected 20 more red marbles than Mary and twice the number of blue marbles Jenny collected. Tom collected three times as many red marbles as Mary. Tom collected 5 fewer blue marbles than Jenny. If Jenny collected 30 red marbles and 25 blue marbles, what's the total number of blue marbles collected by the friends together?",120.0,"To determine the total number of blue marbles collected by Mary, Jenny, Anie, and Tom, we will follow these steps:
+
+1. **Determine the number of red marbles collected by each friend:**
+   - Jenny collected 30 red marbles.
+   - Mary collected twice as many red marbles as Jenny:
+     \[
+     \text{Red marbles collected by Mary} = 2 \times 30 = 60
+     \]
+   - Anie collected 20 more red marbles than Mary:
+     \[
+     \text{Red marbles collected by Anie} = 60 + 20 = 80
+     \]
+   - Tom collected three times as many red marbles as Mary:
+     \[
+     \text{Red marbles collected by Tom} = 3 \times 60 = 180
+     \]
+
+2. **Determine the number of blue marbles collected by each friend:**
+   - Jenny collected 25 blue marbles.
+   - Tom collected 5 fewer blue marbles than Jenny:
+     \[
+     \text{Blue marbles collected by Tom} = 25 - 5 = 20
+     \]
+   - Anie collected twice the number of blue marbles Jenny collected:
+     \[
+     \text{Blue marbles collected by Anie} = 2 \times 25 = 50
+     \]
+   - Mary collected half the number of blue marbles collected by Anie:
+     \[
+     \text{Blue marbles collected by Mary} = \frac{50}{2} = 25
+     \]
+
+3. **Calculate the total number of blue marbles collected by all friends:**
+   - Blue marbles collected by Jenny: 25
+   - Blue marbles collected by Mary: 25
+   - Blue marbles collected by Anie: 50
+   - Blue marbles collected by Tom: 20
+   \[
+   \text{Total blue marbles} = 25 + 25 + 50 + 20 = 120
+   \]
+
+Thus, the total number of blue marbles collected by the friends together is \(\boxed{120}\).",120,120.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,20,19,Natalia is riding a bicycle for the cycling competition. On Monday she rode 40 kilometers and on Tuesday 50 kilometers. On Wednesday she rode 25 kilometers and on Thursday she rode 65 kilometers. On Friday she rode 30 kilometers. How many kilometers did Natalia ride in total?,210.0,"To find out how many kilometers Natalia rode in total, we need to add up the distances she rode each day. Let's break it down step by step:
+
+1. On Monday, Natalia rode 40 kilometers.
+2. On Tuesday, Natalia rode 50 kilometers.
+3. On Wednesday, Natalia rode 25 kilometers.
+4. On Thursday, Natalia rode 65 kilometers.
+5. On Friday, Natalia rode 30 kilometers.
+
+Now, we add these distances together:
+
+\[ 40 + 50 + 25 + 65 + 30 \]
+
+First, let's add the distances for Monday and Tuesday:
+
+\[ 40 + 50 = 90 \]
+
+Next, add the distance for Wednesday:
+
+\[ 90 + 25 = 115 \]
+
+Then, add the distance for Thursday:
+
+\[ 115 + 65 = 180 \]
+
+Finally, add the distance for Friday:
+
+\[ 180 + 30 = 210 \]
+
+So, the total distance Natalia rode is:
+
+\[ \boxed{210} \]",210,210.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,21,20,"Bill is making omelets for his family's breakfast. It takes him 3 minutes to chop a pepper, 4 minutes to chop an onion, and 1 minute to grate enough cheese for one omelet. It takes him 5 minutes to assemble and cook one omelet. He needs to chop up 4 peppers, chop 2 onions, and grate cheese for cooking each of 5 omelets. He also needs to chop 3 tomatoes, and it takes him 4 minutes to chop a tomato. How long will he spend preparing for and cooking the 5 omelets?",62.0,"To determine the total time Bill will spend preparing for and cooking the 5 omelets, we need to break down the task into smaller parts and calculate the time for each part.
+
+1. **Chopping peppers:**
+   - Bill needs to chop 4 peppers.
+   - It takes him 3 minutes to chop one pepper.
+   - Total time for chopping peppers: \( 4 \text{ peppers} \times 3 \text{ minutes/pepper} = 12 \text{ minutes} \).
+
+2. **Chopping onions:**
+   - Bill needs to chop 2 onions.
+   - It takes him 4 minutes to chop one onion.
+   - Total time for chopping onions: \( 2 \text{ onions} \times 4 \text{ minutes/onion} = 8 \text{ minutes} \).
+
+3. **Grating cheese:**
+   - Bill needs to grate cheese for 5 omelets.
+   - It takes him 1 minute to grate enough cheese for one omelet.
+   - Total time for grating cheese: \( 5 \text{ omelets} \times 1 \text{ minute/omelet} = 5 \text{ minutes} \).
+
+4. **Chopping tomatoes:**
+   - Bill needs to chop 3 tomatoes.
+   - It takes him 4 minutes to chop one tomato.
+   - Total time for chopping tomatoes: \( 3 \text{ tomatoes} \times 4 \text{ minutes/tomato} = 12 \text{ minutes} \).
+
+5. **Assembling and cooking omelets:**
+   - Bill needs to assemble and cook 5 omelets.
+   - It takes him 5 minutes to assemble and cook one omelet.
+   - Total time for assembling and cooking omelets: \( 5 \text{ omelets} \times 5 \text{ minutes/omelet} = 25 \text{ minutes} \).
+
+Now, we sum up all the times for each part:
+\[
+12 \text{ minutes (peppers)} + 8 \text{ minutes (onions)} + 5 \text{ minutes (cheese)} + 12 \text{ minutes (tomatoes)} + 25 \text{ minutes (assembling and cooking)} = 62 \text{ minutes}
+\]
+
+Therefore, the total time Bill will spend preparing for and cooking the 5 omelets is \(\boxed{62}\).",62,62.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,22,21,"Mancino is tending 3 gardens that each measure 16 feet by 5 feet. His sister, Marquita, is tilling the soil for two gardens that each measure 8 feet by 4 feet. Luis is working on 4 gardens that each measure 10 feet by 6 feet. How many square feet combined are in all their gardens?",544.0,"To determine the total square footage of all the gardens, we need to calculate the area of each garden and then sum the areas of all the gardens maintained by Mancino, Marquita, and Luis.
+
+First, let's calculate the area of one garden maintained by Mancino:
+\[
+\text{Area of one Mancino's garden} = 16 \text{ feet} \times 5 \text{ feet} = 80 \text{ square feet}
+\]
+Since Mancino has 3 gardens, the total area of Mancino's gardens is:
+\[
+\text{Total area of Mancino's gardens} = 3 \times 80 \text{ square feet} = 240 \text{ square feet}
+\]
+
+Next, let's calculate the area of one garden maintained by Marquita:
+\[
+\text{Area of one Marquita's garden} = 8 \text{ feet} \times 4 \text{ feet} = 32 \text{ square feet}
+\]
+Since Marquita has 2 gardens, the total area of Marquita's gardens is:
+\[
+\text{Total area of Marquita's gardens} = 2 \times 32 \text{ square feet} = 64 \text{ square feet}
+\]
+
+Then, let's calculate the area of one garden maintained by Luis:
+\[
+\text{Area of one Luis's garden} = 10 \text{ feet} \times 6 \text{ feet} = 60 \text{ square feet}
+\]
+Since Luis has 4 gardens, the total area of Luis's gardens is:
+\[
+\text{Total area of Luis's gardens} = 4 \times 60 \text{ square feet} = 240 \text{ square feet}
+\]
+
+Finally, we sum the total areas of all the gardens:
+\[
+\text{Total area of all gardens} = 240 \text{ square feet} + 64 \text{ square feet} + 240 \text{ square feet} = 544 \text{ square feet}
+\]
+
+Thus, the total square footage of all their gardens is:
+\[
+\boxed{544}
+\]",544,544.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,23,22,"Carrie is making punch. She adds 6 12-oz cans of Mountain Dew, 28 oz of ice, and a 40 oz bottle of fruit juice. She also adds 5 8-oz cans of ginger ale. How many 10 oz servings of punch does Carrie have?",18.0,"To determine how many 10 oz servings of punch Carrie has, we need to calculate the total volume of the punch and then divide that by the volume of one serving.
+
+First, let's calculate the volume of each ingredient:
+
+1. **Mountain Dew**: Carrie adds 6 cans of Mountain Dew, and each can is 12 oz.
+   \[
+   6 \times 12 = 72 \text{ oz}
+   \]
+
+2. **Ice**: Carrie adds 28 oz of ice.
+   \[
+   28 \text{ oz}
+   \]
+
+3. **Fruit Juice**: Carrie adds a 40 oz bottle of fruit juice.
+   \[
+   40 \text{ oz}
+   \]
+
+4. **Ginger Ale**: Carrie adds 5 cans of ginger ale, and each can is 8 oz.
+   \[
+   5 \times 8 = 40 \text{ oz}
+   \]
+
+Next, we sum the volumes of all the ingredients to find the total volume of the punch:
+\[
+72 \text{ oz} + 28 \text{ oz} + 40 \text{ oz} + 40 \text{ oz} = 180 \text{ oz}
+\]
+
+Now, we need to determine how many 10 oz servings can be made from 180 oz of punch:
+\[
+\frac{180 \text{ oz}}{10 \text{ oz/serving}} = 18 \text{ servings}
+\]
+
+Therefore, the number of 10 oz servings of punch Carrie has is:
+\[
+\boxed{18}
+\]",18,18.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,24,23,"Jane brings 75% as many pieces of bread as treats to feed the live pets at the zoo. Wanda brings half as many treats as Jane and three times as many pieces of bread as treats. Carlos brings one-third as many treats as Jane and twice as many pieces of bread as treats. If Wanda brings 90 pieces of bread, what is the total number of pieces of bread and treats that everyone mentioned brought to the zoo?",285.0,"To determine the total number of pieces of bread and treats that Jane, Wanda, and Carlos brought to the zoo, we need to follow these steps:
+
+1. **Determine the number of treats Wanda brought:**
+   Wanda brings three times as many pieces of bread as treats. Given that Wanda brings 90 pieces of bread, we can set up the equation:
+   \[
+   3t_W = 90
+   \]
+   Solving for \( t_W \):
+   \[
+   t_W = \frac{90}{3} = 30
+   \]
+   So, Wanda brings 30 treats.
+
+2. **Determine the number of treats Jane brought:**
+   Wanda brings half as many treats as Jane. Therefore, we can set up the equation:
+   \[
+   t_W = \frac{1}{2} t_J
+   \]
+   Substituting \( t_W = 30 \):
+   \[
+   30 = \frac{1}{2} t_J
+   \]
+   Solving for \( t_J \):
+   \[
+   t_J = 30 \times 2 = 60
+   \]
+   So, Jane brings 60 treats.
+
+3. **Determine the number of treats Carlos brought:**
+   Carlos brings one-third as many treats as Jane. Therefore, we can set up the equation:
+   \[
+   t_C = \frac{1}{3} t_J
+   \]
+   Substituting \( t_J = 60 \):
+   \[
+   t_C = \frac{1}{3} \times 60 = 20
+   \]
+   So, Carlos brings 20 treats.
+
+4. **Determine the number of pieces of bread Jane brought:**
+   Jane brings 75% as many pieces of bread as treats. Therefore, we can set up the equation:
+   \[
+   b_J = 0.75 t_J
+   \]
+   Substituting \( t_J = 60 \):
+   \[
+   b_J = 0.75 \times 60 = 45
+   \]
+   So, Jane brings 45 pieces of bread.
+
+5. **Determine the number of pieces of bread Carlos brought:**
+   Carlos brings twice as many pieces of bread as treats. Therefore, we can set up the equation:
+   \[
+   b_C = 2 t_C
+   \]
+   Substituting \( t_C = 20 \):
+   \[
+   b_C = 2 \times 20 = 40
+   \]
+   So, Carlos brings 40 pieces of bread.
+
+6. **Calculate the total number of pieces of bread:**
+   Adding the pieces of bread brought by Jane, Wanda, and Carlos:
+   \[
+   b_{\text{total}} = b_J + b_W + b_C = 45 + 90 + 40 = 175
+   \]
+
+7. **Calculate the total number of treats:**
+   Adding the treats brought by Jane, Wanda, and Carlos:
+   \[
+   t_{\text{total}} = t_J + t_W + t_C = 60 + 30 + 20 = 110
+   \]
+
+8. **Calculate the total number of pieces of bread and treats:**
+   Adding the total number of pieces of bread and treats:
+   \[
+   \text{Total} = b_{\text{total}} + t_{\text{total}} = 175 + 110 = 285
+   \]
+
+Therefore, the total number of pieces of bread and treats that everyone mentioned brought to the zoo is \(\boxed{285}\).",285,285.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,25,24,"When Jane visited Iran, she visited 6 more than twice as many rehabilitation centers as Han. Han visited 2 less than twice as many rehabilitation centers as Jude did. Jude visited half as many rehabilitation centers as Lisa did. Omar visited 3 more rehabilitation centers than Jude did. If Lisa visited 6 rehabilitation centers, how many rehabilitation centers did they all visit in total, assuming they are all different?",33.0,"To determine the total number of rehabilitation centers visited by Jane, Han, Jude, and Omar, we need to follow the given relationships step by step.
+
+1. **Determine how many rehabilitation centers Jude visited:**
+   Lisa visited 6 rehabilitation centers. Since Jude visited half as many rehabilitation centers as Lisa, we calculate:
+   \[
+   \text{Jude's visits} = \frac{6}{2} = 3
+   \]
+
+2. **Determine how many rehabilitation centers Han visited:**
+   Han visited 2 less than twice as many rehabilitation centers as Jude. So, we calculate:
+   \[
+   \text{Han's visits} = 2 \times 3 - 2 = 6 - 2 = 4
+   \]
+
+3. **Determine how many rehabilitation centers Jane visited:**
+   Jane visited 6 more than twice as many rehabilitation centers as Han. So, we calculate:
+   \[
+   \text{Jane's visits} = 2 \times 4 + 6 = 8 + 6 = 14
+   \]
+
+4. **Determine how many rehabilitation centers Omar visited:**
+   Omar visited 3 more rehabilitation centers than Jude. So, we calculate:
+   \[
+   \text{Omar's visits} = 3 + 3 = 6
+   \]
+
+5. **Calculate the total number of rehabilitation centers visited by all four:**
+   We add up the visits of Jane, Han, Jude, and Omar:
+   \[
+   \text{Total visits} = 14 + 4 + 3 + 6 = 27
+   \]
+
+Therefore, the total number of rehabilitation centers they all visited is \(\boxed{27}\).",27,27.0,False,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,26,25,"Marcus spends 20 minutes giving his dog a bath and half as long blow-drying her. After the bath, Marcus spends 8 minutes brushing his dog. Then he takes her for a walk along a 3-mile trail. If Marcus walks at 6 miles per hour, how much time does he spend with his dog total?",68.0,"To determine the total time Marcus spends with his dog, we need to add up the time spent on each activity. Let's break it down step by step.
+
+1. **Bathing the dog:**
+   Marcus spends 20 minutes giving his dog a bath.
+
+2. **Blow-drying the dog:**
+   Marcus spends half as long blow-drying her as he does bathing her. Therefore, the time spent blow-drying is:
+   \[
+   \frac{20}{2} = 10 \text{ minutes}
+   \]
+
+3. **Brushing the dog:**
+   Marcus spends 8 minutes brushing his dog.
+
+4. **Walking the dog:**
+   Marcus takes his dog for a walk along a 3-mile trail. He walks at a speed of 6 miles per hour. To find the time spent walking, we use the formula:
+   \[
+   \text{Time} = \frac{\text{Distance}}{\text{Speed}}
+   \]
+   Substituting the given values:
+   \[
+   \text{Time} = \frac{3 \text{ miles}}{6 \text{ miles per hour}} = 0.5 \text{ hours}
+   \]
+   Since there are 60 minutes in an hour, we convert 0.5 hours to minutes:
+   \[
+   0.5 \text{ hours} \times 60 \text{ minutes per hour} = 30 \text{ minutes}
+   \]
+
+Now, we add up all the times spent on each activity:
+\[
+20 \text{ minutes} + 10 \text{ minutes} + 8 \text{ minutes} + 30 \text{ minutes} = 68 \text{ minutes}
+\]
+
+Therefore, the total time Marcus spends with his dog is:
+\[
+\boxed{68}
+\]",68,68.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,27,26,There are 6 boxes of crayons that hold 8 orange crayons. There are 7 boxes of crayons that have 5 blue crayons. There is 1 box of 11 red crayons. There are 4 boxes of crayons that hold 6 green crayons. How many crayons are there in total?,118.0,"To determine the total number of crayons, we need to calculate the number of crayons in each color category and then sum them up.
+
+1. Calculate the number of orange crayons:
+   - There are 6 boxes of orange crayons.
+   - Each box contains 8 orange crayons.
+   - Therefore, the total number of orange crayons is \(6 \times 8 = 48\).
+
+2. Calculate the number of blue crayons:
+   - There are 7 boxes of blue crayons.
+   - Each box contains 5 blue crayons.
+   - Therefore, the total number of blue crayons is \(7 \times 5 = 35\).
+
+3. Calculate the number of red crayons:
+   - There is 1 box of red crayons.
+   - Each box contains 11 red crayons.
+   - Therefore, the total number of red crayons is \(1 \times 11 = 11\).
+
+4. Calculate the number of green crayons:
+   - There are 4 boxes of green crayons.
+   - Each box contains 6 green crayons.
+   - Therefore, the total number of green crayons is \(4 \times 6 = 24\).
+
+5. Sum up the crayons from all color categories:
+   - The total number of crayons is \(48 + 35 + 11 + 24\).
+   - First, add \(48\) and \(35\): \(48 + 35 = 83\).
+   - Next, add \(83\) and \(11\): \(83 + 11 = 94\).
+   - Finally, add \(94\) and \(24\): \(94 + 24 = 118\).
+
+Therefore, the total number of crayons is \(\boxed{118}\).",118,118.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,28,27,"Borgnine wants to see 1100 legs at the zoo. He has already seen 12 chimps, 8 lions, and 5 lizards. He also saw 8 penguins. He is next headed to see the tarantulas. How many tarantulas does he need to see to meet his goal?",126.0,"To determine how many tarantulas Borgnine needs to see to meet his goal of seeing 1100 legs at the zoo, we need to calculate the total number of legs he has already seen and then find out how many more legs he needs to see.
+
+First, let's calculate the number of legs for each type of animal Borgnine has seen:
+
+1. **Chimps**: Each chimp has 2 legs.
+   \[
+   12 \text{ chimps} \times 2 \text{ legs per chimp} = 24 \text{ legs}
+   \]
+
+2. **Lions**: Each lion has 4 legs.
+   \[
+   8 \text{ lions} \times 4 \text{ legs per lion} = 32 \text{ legs}
+   \]
+
+3. **Lizards**: Each lizard has 4 legs.
+   \[
+   5 \text{ lizards} \times 4 \text{ legs per lizard} = 20 \text{ legs}
+   \]
+
+4. **Penguins**: Each penguin has 2 legs.
+   \[
+   8 \text{ penguins} \times 2 \text{ legs per penguin} = 16 \text{ legs}
+   \]
+
+Next, we sum up the legs from all the animals he has already seen:
+\[
+24 \text{ legs} + 32 \text{ legs} + 20 \text{ legs} + 16 \text{ legs} = 92 \text{ legs}
+\]
+
+Borgnine wants to see a total of 1100 legs. To find out how many more legs he needs to see, we subtract the number of legs he has already seen from his goal:
+\[
+1100 \text{ legs} - 92 \text{ legs} = 1008 \text{ legs}
+\]
+
+Each tarantula has 8 legs. To find out how many tarantulas he needs to see, we divide the remaining number of legs by the number of legs per tarantula:
+\[
+\frac{1008 \text{ legs}}{8 \text{ legs per tarantula}} = 126 \text{ tarantulas}
+\]
+
+Therefore, Borgnine needs to see \boxed{126} tarantulas to meet his goal.",126,126.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,29,28,"A pen is longer than the rubber by 3 centimeters, and shorter than the pencil by 2 centimeters. Considering the pencil is 12 centimeters long, A marker is 1 centimeter longer than the pencil. what is the total length of the rubber, the pen, the pencil, and all the other stationery items mentioned altogether?",42.0,"To determine the total length of the rubber, the pen, the pencil, and the marker, we need to find the length of each item step by step.
+
+1. **Determine the length of the pen:**
+   - We know the pencil is 12 centimeters long.
+   - The pen is 2 centimeters shorter than the pencil.
+   - Therefore, the length of the pen is:
+     \[
+     12 - 2 = 10 \text{ centimeters}
+     \]
+
+2. **Determine the length of the rubber:**
+   - The pen is 3 centimeters longer than the rubber.
+   - Therefore, the length of the rubber is:
+     \[
+     10 - 3 = 7 \text{ centimeters}
+     \]
+
+3. **Determine the length of the marker:**
+   - The marker is 1 centimeter longer than the pencil.
+   - Therefore, the length of the marker is:
+     \[
+     12 + 1 = 13 \text{ centimeters}
+     \]
+
+4. **Calculate the total length of all the items:**
+   - Add the lengths of the rubber, the pen, the pencil, and the marker:
+     \[
+     7 + 10 + 12 + 13
+     \]
+
+5. **Perform the addition:**
+   - First, add 7 and 10:
+     \[
+     7 + 10 = 17
+     \]
+   - Next, add 12 to the result:
+     \[
+     17 + 12 = 29
+     \]
+   - Finally, add 13 to the result:
+     \[
+     29 + 13 = 42
+     \]
+
+Therefore, the total length of the rubber, the pen, the pencil, and the marker is \(\boxed{42}\).",42,42.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,30,29,The ages of the three oldest brothers are consecutive integers with the sum of 96. They also have a younger brother named Liam who is 1 year younger than the youngest of the three oldest brothers. How old is the youngest brother?,30.0,"To determine the age of the youngest brother, we start by defining the ages of the three oldest brothers. Let's denote the age of the youngest brother by \( x \). Since the ages are consecutive integers, the age of the middle brother is \( x+1 \) and the age of the oldest brother is \( x+2 \).
+
+According to the problem, the sum of their ages is 96. Therefore, we can write the following equation:
+\[
+x + (x+1) + (x+2) = 96
+\]
+
+Next, we combine like terms on the left side of the equation:
+\[
+3x + 3 = 96
+\]
+
+To isolate \( x \), we subtract 3 from both sides of the equation:
+\[
+3x = 93
+\]
+
+Then, we divide both sides by 3:
+\[
+x = 31
+\]
+
+So, the age of the youngest brother is \( 31 \). Since Liam is 1 year younger than the youngest brother, Liam's age is \( 31 - 1 = 30 \). However, the problem asks for the age of the youngest brother, which is \( 31 \).
+
+Therefore, the final answer is:
+\[
+\boxed{31}
+\]",31,31.0,False,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,31,30,"In a spelling contest held in her school, Drew got 20 questions correct, winning her the competition. She got six questions wrong, and her competitor Carla got 14 questions correct and twice as many questions wrong as the number of questions Drew got wrong. Another competitor, Maya, got 3 fewer questions correct than Drew and 2 more questions wrong than Drew. If each competitor was asked a different question, how many questions were asked in the competition?",77.0,"To determine the total number of questions asked in the competition, we need to calculate the total number of questions each competitor answered and then sum these amounts.
+
+First, let's find out how many questions Drew answered:
+- Drew got 20 questions correct.
+- Drew got 6 questions wrong.
+- Therefore, the total number of questions Drew answered is:
+  \[
+  20 + 6 = 26
+  \]
+
+Next, let's find out how many questions Carla answered:
+- Carla got 14 questions correct.
+- Carla got twice as many questions wrong as Drew. Since Drew got 6 questions wrong, Carla got:
+  \[
+  2 \times 6 = 12
+  \]
+- Therefore, the total number of questions Carla answered is:
+  \[
+  14 + 12 = 26
+  \]
+
+Then, let's find out how many questions Maya answered:
+- Maya got 3 fewer questions correct than Drew. Since Drew got 20 questions correct, Maya got:
+  \[
+  20 - 3 = 17
+  \]
+- Maya got 2 more questions wrong than Drew. Since Drew got 6 questions wrong, Maya got:
+  \[
+  6 + 2 = 8
+  \]
+- Therefore, the total number of questions Maya answered is:
+  \[
+  17 + 8 = 25
+  \]
+
+Finally, we sum the total number of questions answered by all three competitors:
+\[
+26 + 26 + 25 = 77
+\]
+
+Thus, the total number of questions asked in the competition is:
+\[
+\boxed{77}
+\]",77,77.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,32,31,"Tom puts 30 miles per day on his bike for the first 183 days of the year. For the next 20 days of the year, he rides 25 miles per day. For the remaining 162 days of the year he goes 35 miles per day. How many miles does he ride for the year?",11660.0,"To determine the total number of miles Tom rides in a year, we need to break down the problem into three parts based on the different distances he rides each day for different periods of the year.
+
+1. Calculate the total miles Tom rides in the first 183 days:
+   \[
+   30 \text{ miles/day} \times 183 \text{ days} = 5490 \text{ miles}
+   \]
+
+2. Calculate the total miles Tom rides in the next 20 days:
+   \[
+   25 \text{ miles/day} \times 20 \text{ days} = 500 \text{ miles}
+   \]
+
+3. Calculate the total miles Tom rides in the remaining 162 days:
+   \[
+   35 \text{ miles/day} \times 162 \text{ days} = 5670 \text{ miles}
+   \]
+
+Now, add up the miles from all three periods to find the total miles Tom rides in the year:
+\[
+5490 \text{ miles} + 500 \text{ miles} + 5670 \text{ miles} = 11660 \text{ miles}
+\]
+
+Therefore, the total number of miles Tom rides for the year is \(\boxed{11660}\).",11660,11660.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,33,32,"Last night Kannon had 3 apples, a banana, and 4 oranges for dinner. Today she is planning to have 4 more apples than last night, 10 times as many bananas as she ate last night, and twice as many oranges as apples she'll have today. Last night she also had 2 pears. Today she is planning to have 2 fewer pears than the number of apples she'll have today. How many fruits would she have eaten so far in the two meals?",46.0,"To determine the total number of fruits Kannon has eaten so far in the two meals, we need to calculate the number of each type of fruit she plans to eat today and then sum up all the fruits from both meals.
+
+First, let's find out how many apples Kannon plans to eat today:
+- Last night, she had 3 apples.
+- Today, she plans to have 4 more apples than last night.
+\[ 3 + 4 = 7 \]
+So, she plans to eat 7 apples today.
+
+Next, let's find out how many bananas Kannon plans to eat today:
+- Last night, she had 1 banana.
+- Today, she plans to have 10 times as many bananas as she ate last night.
+\[ 1 \times 10 = 10 \]
+So, she plans to eat 10 bananas today.
+
+Now, let's find out how many oranges Kannon plans to eat today:
+- Today, she plans to have twice as many oranges as apples she'll have today.
+\[ 7 \times 2 = 14 \]
+So, she plans to eat 14 oranges today.
+
+Next, let's find out how many pears Kannon plans to eat today:
+- Last night, she had 2 pears.
+- Today, she plans to have 2 fewer pears than the number of apples she'll have today.
+\[ 7 - 2 = 5 \]
+So, she plans to eat 5 pears today.
+
+Now, let's sum up all the fruits she plans to eat today:
+\[ 7 \text{ apples} + 10 \text{ bananas} + 14 \text{ oranges} + 5 \text{ pears} = 36 \text{ fruits} \]
+
+Next, let's sum up all the fruits she ate last night:
+\[ 3 \text{ apples} + 1 \text{ banana} + 4 \text{ oranges} + 2 \text{ pears} = 10 \text{ fruits} \]
+
+Finally, let's find the total number of fruits she has eaten so far in the two meals:
+\[ 10 \text{ fruits} + 36 \text{ fruits} = 46 \text{ fruits} \]
+
+Therefore, the total number of fruits Kannon would have eaten so far in the two meals is \(\boxed{46}\).",46,46.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,34,33,"Emma can run all-around two arenas in 20 hours. If it takes Fernando twice as long to run his course, Gina takes half as long as Fernando to run all around the two arenas. what's the total time it takes everyone mentioned to run all around the two arenas?",80.0,"To determine the total time it takes Emma, Fernando, and Gina to run all around the two arenas, we need to calculate the time each person takes individually and then sum these times.
+
+1. **Emma's Time:**
+   Emma can run all-around two arenas in 20 hours.
+
+2. **Fernando's Time:**
+   Fernando takes twice as long as Emma to run his course. Therefore, we calculate:
+   \[
+   \text{Fernando's time} = 2 \times \text{Emma's time} = 2 \times 20 = 40 \text{ hours}
+   \]
+
+3. **Gina's Time:**
+   Gina takes half as long as Fernando to run all around the two arenas. Therefore, we calculate:
+   \[
+   \text{Gina's time} = \frac{1}{2} \times \text{Fernando's time} = \frac{1}{2} \times 40 = 20 \text{ hours}
+   \]
+
+4. **Total Time:**
+   To find the total time it takes everyone to run all around the two arenas, we sum the times for Emma, Fernando, and Gina:
+   \[
+   \text{Total time} = \text{Emma's time} + \text{Fernando's time} + \text{Gina's time} = 20 + 40 + 20 = 80 \text{ hours}
+   \]
+
+Thus, the total time it takes everyone mentioned to run all around the two arenas is \(\boxed{80}\).",80,80.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,35,34,"Mr. Sergio is a fruit grower producing apples, mangoes and oranges. In a particular season, the total produce of apples was twice the total produce of mangoes, and the total produce of oranges was 200 kg more than that of mangoes. He also produced 100 kg fewer bananas than apples. If his farm produced 400 kg of mangoes and he sold the fruits at $50 per kg, calculate the total amount of money he got in that season.",125000.0,"To determine the total amount of money Mr. Sergio got from selling his fruits, we need to calculate the quantity of each type of fruit he produced and then find the total revenue from selling them.
+
+1. **Calculate the total produce of apples:**
+   - Mr. Sergio produced 400 kg of mangoes.
+   - The total produce of apples was twice the total produce of mangoes.
+   \[
+   \text{Total produce of apples} = 2 \times 400 \text{ kg} = 800 \text{ kg}
+   \]
+
+2. **Calculate the total produce of oranges:**
+   - The total produce of oranges was 200 kg more than that of mangoes.
+   \[
+   \text{Total produce of oranges} = 400 \text{ kg} + 200 \text{ kg} = 600 \text{ kg}
+   \]
+
+3. **Calculate the total produce of bananas:**
+   - Mr. Sergio produced 100 kg fewer bananas than apples.
+   \[
+   \text{Total produce of bananas} = 800 \text{ kg} - 100 \text{ kg} = 700 \text{ kg}
+   \]
+
+4. **Calculate the total produce of all fruits:**
+   - Add the quantities of apples, mangoes, oranges, and bananas.
+   \[
+   \text{Total produce} = 800 \text{ kg} + 400 \text{ kg} + 600 \text{ kg} + 700 \text{ kg} = 2500 \text{ kg}
+   \]
+
+5. **Calculate the total revenue:**
+   - Mr. Sergio sold the fruits at $50 per kg.
+   \[
+   \text{Total revenue} = 2500 \text{ kg} \times 50 \text{ dollars/kg} = 125000 \text{ dollars}
+   \]
+
+Therefore, the total amount of money Mr. Sergio got in that season is \(\boxed{125000}\).",125000,125000.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,36,35,"Opal won $100.00 betting on a horse race. She put half of her winnings into savings and bet the other half of her winnings. This time, she made a 60% profit and again, put half of her earnings into savings. She then bet the money she did not put into savings, made a 25% profit, and again put half of her new earnings into savings. How much money in total did she put into her savings?",115.0,"To determine how much money Opal put into her savings, we will follow the sequence of her actions step by step.
+
+1. **Initial Winnings:**
+   Opal won $100.00.
+
+2. **First Bet:**
+   She put half of her winnings into savings:
+   \[
+   \text{Savings after first bet} = \frac{100}{2} = 50 \text{ dollars}
+   \]
+   She bet the other half:
+   \[
+   \text{Amount bet after first bet} = \frac{100}{2} = 50 \text{ dollars}
+   \]
+
+3. **Second Bet:**
+   She made a 60% profit on her second bet:
+   \[
+   \text{Profit from second bet} = 50 \times 0.60 = 30 \text{ dollars}
+   \]
+   Her total earnings after the second bet:
+   \[
+   \text{Total earnings after second bet} = 50 + 30 = 80 \text{ dollars}
+   \]
+   She put half of her earnings into savings:
+   \[
+   \text{Savings after second bet} = \frac{80}{2} = 40 \text{ dollars}
+   \]
+   She bet the other half:
+   \[
+   \text{Amount bet after second bet} = \frac{80}{2} = 40 \text{ dollars}
+   \]
+
+4. **Third Bet:**
+   She made a 25% profit on her third bet:
+   \[
+   \text{Profit from third bet} = 40 \times 0.25 = 10 \text{ dollars}
+   \]
+   Her total earnings after the third bet:
+   \[
+   \text{Total earnings after third bet} = 40 + 10 = 50 \text{ dollars}
+   \]
+   She put half of her earnings into savings:
+   \[
+   \text{Savings after third bet} = \frac{50}{2} = 25 \text{ dollars}
+   \]
+
+5. **Total Savings:**
+   To find the total amount Opal put into her savings, we add up the savings from each bet:
+   \[
+   \text{Total savings} = 50 + 40 + 25 = 115 \text{ dollars}
+   \]
+
+Thus, the total amount of money Opal put into her savings is \(\boxed{115}\).",115,115.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,37,36,John joins a country club with 3 other members of his family. The fee to join is $4000 per person. There is also a monthly cost of $1000 per person. There is also an annual maintenance fee of $600 per person. John agrees to pay half the total cost for the whole family. How much does John pay for the first year?,33200.0,"To determine how much John pays for the first year, we need to calculate the total cost for the family and then find out how much John pays, which is half of the total cost.
+
+First, let's calculate the initial joining fee for the family. Since there are 4 members in John's family and the joining fee per person is $4000, the total joining fee is:
+\[ 4 \times 4000 = 16000 \text{ dollars} \]
+
+Next, let's calculate the monthly cost for the family. The monthly cost per person is $1000, and there are 4 members. The total monthly cost is:
+\[ 4 \times 1000 = 4000 \text{ dollars per month} \]
+Since there are 12 months in a year, the total annual monthly cost is:
+\[ 4000 \times 12 = 48000 \text{ dollars} \]
+
+Now, let's calculate the annual maintenance fee for the family. The annual maintenance fee per person is $600, and there are 4 members. The total annual maintenance fee is:
+\[ 4 \times 600 = 2400 \text{ dollars} \]
+
+Adding up all these costs gives us the total cost for the first year:
+\[ 16000 + 48000 + 2400 = 66400 \text{ dollars} \]
+
+Since John agrees to pay half of the total cost, we need to find half of $66400:
+\[ \frac{66400}{2} = 33200 \text{ dollars} \]
+
+Therefore, the amount John pays for the first year is:
+\[ \boxed{33200} \]",33200,33200.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,38,37,"Safari National park has 100 lions, half as many snakes, and 10 fewer giraffes than snakes. On the other hand, Savanna National park has double as many lions as Safari National park, triple as many snakes as Safari National park, and 20 more giraffes than Safari National park. Safari National park also has twice as many zebras as giraffes. Savanna National park has half as many zebras as lions. How many animals in total does Savanna National park have?",510.0,"To determine the total number of animals in Savanna National park, we need to calculate the number of each type of animal in both parks and then focus on Savanna National park.
+
+First, let's find the number of each type of animal in Safari National park:
+- Lions: 100
+- Snakes: \( \frac{100}{2} = 50 \)
+- Giraffes: \( 50 - 10 = 40 \)
+- Zebras: \( 2 \times 40 = 80 \)
+
+Now, let's find the number of each type of animal in Savanna National park:
+- Lions: \( 2 \times 100 = 200 \)
+- Snakes: \( 3 \times 50 = 150 \)
+- Giraffes: \( 40 + 20 = 60 \)
+- Zebras: \( \frac{200}{2} = 100 \)
+
+Next, we sum up the total number of animals in Savanna National park:
+\[ 200 \text{ (lions)} + 150 \text{ (snakes)} + 60 \text{ (giraffes)} + 100 \text{ (zebras)} = 410 \]
+
+Therefore, the total number of animals in Savanna National park is \(\boxed{410}\).",410,410.0,False,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,39,38,Tim decides to get animals for his zoo. He buys 3 goats for $400 each. He gets twice as many llamas which cost 50% more each. He also buys 4 alpacas that cost 25% less each than a llama. How much did he spend?,6600.0,"To determine the total amount Tim spent on animals for his zoo, we need to calculate the cost of each type of animal separately and then sum these costs.
+
+1. **Calculate the cost of the goats:**
+   - Tim buys 3 goats.
+   - Each goat costs $400.
+   \[
+   \text{Total cost of goats} = 3 \times 400 = 1200
+   \]
+
+2. **Calculate the cost of the llamas:**
+   - Tim gets twice as many llamas as goats.
+   - Since he bought 3 goats, he gets \(2 \times 3 = 6\) llamas.
+   - Each llama costs 50% more than a goat.
+   - The cost of each llama is \(400 + 0.5 \times 400 = 400 + 200 = 600\).
+   \[
+   \text{Total cost of llamas} = 6 \times 600 = 3600
+   \]
+
+3. **Calculate the cost of the alpacas:**
+   - Tim buys 4 alpacas.
+   - Each alpaca costs 25% less than a llama.
+   - The cost of each alpaca is \(600 - 0.25 \times 600 = 600 - 150 = 450\).
+   \[
+   \text{Total cost of alpacas} = 4 \times 450 = 1800
+   \]
+
+4. **Calculate the total cost of all the animals:**
+   \[
+   \text{Total cost} = \text{Total cost of goats} + \text{Total cost of llamas} + \text{Total cost of alpacas} = 1200 + 3600 + 1800 = 6600
+   \]
+
+Therefore, the total amount Tim spent is \(\boxed{6600}\).",6600,6600.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,40,39,"Pulsar, the shuffle-dancing bear, Polly, the pink prancing poodle, and Petra, the proud portly pachyderm, are entertainers at the Big Top Circus. In one show, Pulsar stands on his two back legs for a total of 10 minutes. Then, Polly stands on her back legs for three times as long as Pulsar. And then, finally, Petra stands on his back legs for one-sixth as long as Polly. Then, Marvin the mischievous monkey stands on his back legs for half as long as Polly. What is the combined length of time, in minutes, that all the entertainers mentioned stand on their back legs?",60.0,"To determine the combined length of time that all the entertainers stand on their back legs, we need to calculate the time each one spends standing on their back legs and then sum these times.
+
+1. **Pulsar's time:**
+   Pulsar stands on his back legs for 10 minutes.
+
+2. **Polly's time:**
+   Polly stands on her back legs for three times as long as Pulsar.
+   \[
+   \text{Polly's time} = 3 \times 10 = 30 \text{ minutes}
+   \]
+
+3. **Petra's time:**
+   Petra stands on his back legs for one-sixth as long as Polly.
+   \[
+   \text{Petra's time} = \frac{1}{6} \times 30 = 5 \text{ minutes}
+   \]
+
+4. **Marvin's time:**
+   Marvin stands on his back legs for half as long as Polly.
+   \[
+   \text{Marvin's time} = \frac{1}{2} \times 30 = 15 \text{ minutes}
+   \]
+
+Now, we sum the times for all the entertainers:
+\[
+\text{Total time} = \text{Pulsar's time} + \text{Polly's time} + \text{Petra's time} + \text{Marvin's time}
+\]
+\[
+\text{Total time} = 10 + 30 + 5 + 15 = 60 \text{ minutes}
+\]
+
+Thus, the combined length of time that all the entertainers stand on their back legs is \(\boxed{60}\).",60,60.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,41,40,"Buffy has a sailboat with a planing hull that she sails in the Gulf of Mexico. Under optimal wind conditions, the use of two sails brings the ship to the speed of 50 knots, whereas under the same conditions, the use of one sail brings her ship to the speed of 25 knots. A knot is a nautical term for speed equal to 1 nautical mile per hour, and one nautical mile equals 1.15 land miles. If she travels in her sailboat under optimal wind conditions for 4 hours with one sail and then for another 4 hours with two sails, Under the same conditions, the use of three sails brings the ship to the speed of 60 knots, and she sails for 1 hour using three sails. what is the total distance, in land miles, that she will travel?",414.0,"To determine the total distance Buffy travels in land miles, we need to calculate the distance she covers with each set of sails and then sum these distances.
+
+First, let's calculate the distance Buffy travels with one sail:
+- Speed with one sail: 25 knots
+- Time traveled with one sail: 4 hours
+
+\[
+\text{Distance with one sail} = \text{Speed} \times \text{Time} = 25 \text{ knots} \times 4 \text{ hours} = 100 \text{ nautical miles}
+\]
+
+Next, let's calculate the distance Buffy travels with two sails:
+- Speed with two sails: 50 knots
+- Time traveled with two sails: 4 hours
+
+\[
+\text{Distance with two sails} = \text{Speed} \times \text{Time} = 50 \text{ knots} \times 4 \text{ hours} = 200 \text{ nautical miles}
+\]
+
+Then, let's calculate the distance Buffy travels with three sails:
+- Speed with three sails: 60 knots
+- Time traveled with three sails: 1 hour
+
+\[
+\text{Distance with three sails} = \text{Speed} \times \text{Time} = 60 \text{ knots} \times 1 \text{ hour} = 60 \text{ nautical miles}
+\]
+
+Now, we sum the distances traveled with each set of sails to find the total distance in nautical miles:
+
+\[
+\text{Total distance in nautical miles} = 100 \text{ nautical miles} + 200 \text{ nautical miles} + 60 \text{ nautical miles} = 360 \text{ nautical miles}
+\]
+
+Finally, we convert the total distance from nautical miles to land miles. Since 1 nautical mile equals 1.15 land miles:
+
+\[
+\text{Total distance in land miles} = 360 \text{ nautical miles} \times 1.15 \text{ land miles per nautical mile} = 414 \text{ land miles}
+\]
+
+Thus, the total distance Buffy will travel is:
+
+\[
+\boxed{414}
+\]",414,414.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,42,41,"Peter carried $500 to the market. He bought 6 kilos of potatoes for $2 per kilo, 9 kilos of tomato for $3 per kilo, 5 kilos of cucumbers for $4 per kilo, and 3 kilos of bananas for $5 per kilo. He also bought 4 kilos of rice for $6 per kilo. How much is Peter's remaining money?",402.0,"To determine how much money Peter has remaining after his purchases, we need to calculate the total cost of each type of item he bought and then subtract that total from the $500 he initially carried to the market.
+
+First, let's calculate the cost of each type of item:
+- The cost of potatoes is \(6 \text{ kilos} \times \$2/\text{kilo} = \$12\).
+- The cost of tomatoes is \(9 \text{ kilos} \times \$3/\text{kilo} = \$27\).
+- The cost of cucumbers is \(5 \text{ kilos} \times \$4/\text{kilo} = \$20\).
+- The cost of bananas is \(3 \text{ kilos} \times \$5/\text{kilo} = \$15\).
+- The cost of rice is \(4 \text{ kilos} \times \$6/\text{kilo} = \$24\).
+
+Next, we sum the costs of all the items:
+\[
+\$12 + \$27 + \$20 + \$15 + \$24 = \$98
+\]
+
+Finally, we subtract the total cost from the initial amount of money Peter carried to the market:
+\[
+\$500 - \$98 = \$402
+\]
+
+Therefore, Peter's remaining money is \(\boxed{402}\).",402,402.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,43,42,"Mell went to a cafeteria to spend some time with her friends. She ordered two cups of coffee and one piece of cake. Two of her friends ordered the same, but each of them also bought a bowl of ice cream. One cup of coffee is $4, one piece of cake is $7, and a bowl of ice cream is $3. One more friend, Nina, ordered the same as Mell, but she also bought 2 bowls of ice cream. How much money did Mell and her friends need to pay at the cafeteria?",72.0,"To determine the total amount of money Mell and her friends needed to pay at the cafeteria, we will calculate the cost of each person's order and then sum these costs.
+
+First, let's calculate the cost of Mell's order:
+- Mell ordered 2 cups of coffee and 1 piece of cake.
+- The cost of one cup of coffee is $4, so the cost of 2 cups is \(2 \times 4 = 8\) dollars.
+- The cost of one piece of cake is $7.
+- Therefore, the total cost of Mell's order is \(8 + 7 = 15\) dollars.
+
+Next, let's calculate the cost of each of Mell's two friends' orders:
+- Each friend ordered 2 cups of coffee, 1 piece of cake, and 1 bowl of ice cream.
+- The cost of one cup of coffee is $4, so the cost of 2 cups is \(2 \times 4 = 8\) dollars.
+- The cost of one piece of cake is $7.
+- The cost of one bowl of ice cream is $3.
+- Therefore, the total cost of each friend's order is \(8 + 7 + 3 = 18\) dollars.
+
+Since there are two friends, the total cost for both friends is \(2 \times 18 = 36\) dollars.
+
+Now, let's calculate the cost of Nina's order:
+- Nina ordered the same as Mell, which is 2 cups of coffee and 1 piece of cake, plus 2 bowls of ice cream.
+- The cost of one cup of coffee is $4, so the cost of 2 cups is \(2 \times 4 = 8\) dollars.
+- The cost of one piece of cake is $7.
+- The cost of two bowls of ice cream is \(2 \times 3 = 6\) dollars.
+- Therefore, the total cost of Nina's order is \(8 + 7 + 6 = 21\) dollars.
+
+Finally, let's sum the costs of all the orders:
+- The total cost for Mell is $15.
+- The total cost for the two friends is $36.
+- The total cost for Nina is $21.
+- Therefore, the total amount of money Mell and her friends needed to pay is \(15 + 36 + 21 = 72\) dollars.
+
+The final answer is \(\boxed{72}\).",72,72.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,44,43,"Manny is making lasagna for dinner with his four friends, Lisa, Raphael, Aaron, and Kai. He needs to know how many pieces to cut the lasagna into to serve it. Manny only wants one piece. Aaron doesn't like lasagna much and will probably only eat garlic bread and salad. Kai is always hungry and will eat twice as much as Manny. Raphael always eats half the amount Manny does, but his sister Lisa loves lasagna and will eat two pieces, plus any Raphael has left of his piece. Another friend, Nora, is picky and will only eat one-third of what Manny eats, and Lisa will eat whatever Nora leaves of her piece. How many pieces should Manny cut his lasagna into?",7.0,"To determine how many pieces Manny should cut his lasagna into, we need to calculate the amount each person will eat based on the given conditions. Let's break it down step by step.
+
+1. **Manny's Consumption:**
+   Manny will eat 1 piece.
+
+2. **Aaron's Consumption:**
+   Aaron doesn't like lasagna much and will eat 0 pieces.
+
+3. **Kai's Consumption:**
+   Kai will eat twice as much as Manny.
+   \[
+   \text{Kai's consumption} = 2 \times 1 = 2 \text{ pieces}
+   \]
+
+4. **Raphael's Consumption:**
+   Raphael always eats half the amount Manny does.
+   \[
+   \text{Raphael's consumption} = \frac{1}{2} \times 1 = 0.5 \text{ pieces}
+   \]
+
+5. **Lisa's Consumption:**
+   Lisa will eat 2 pieces plus any Raphael has left of his piece. Raphael has 0.5 pieces, so Lisa will eat:
+   \[
+   \text{Lisa's consumption} = 2 + 0.5 = 2.5 \text{ pieces}
+   \]
+
+6. **Nora's Consumption:**
+   Nora will eat one-third of what Manny eats.
+   \[
+   \text{Nora's consumption} = \frac{1}{3} \times 1 = \frac{1}{3} \text{ pieces}
+   \]
+   Lisa will eat whatever Nora leaves of her piece. Nora leaves:
+   \[
+   \text{Nora's leave} = 2.5 - \frac{1}{3} = \frac{7.5}{3} - \frac{1}{3} = \frac{6.5}{3} = \frac{13}{6} \text{ pieces}
+   \]
+   Lisa will eat:
+   \[
+   \text{Lisa's consumption} = \frac{13}{6} \text{ pieces}
+   \]
+
+7. **Total Consumption:**
+   Now, we sum up the consumption of all the friends:
+   \[
+   \text{Total consumption} = \text{Manny's consumption} + \text{Aaron's consumption} + \text{Kai's consumption} + \text{Raphael's consumption} + \text{Lisa's consumption} + \text{Nora's consumption}
+   \]
+   Converting all values to fractions for easier addition:
+   \[
+   \text{Manny's consumption} = 1 = \frac{6}{6}
+   \]
+   \[
+   \text{Aaron's consumption} = 0 = \frac{0}{6}
+   \]
+   \[
+   \text{Kai's consumption} = 2 = \frac{12}{6}
+   \]
+   \[
+   \text{Raphael's consumption} = 0.5 = \frac{3}{6}
+   \]
+   \[
+   \text{Lisa's consumption} = \frac{13}{6}
+   \]
+   \[
+   \text{Nora's consumption} = \frac{1}{3} = \frac{2}{6}
+   \]
+   Adding these fractions:
+   \[
+   \text{Total consumption} = \frac{6}{6} + \frac{0}{6} + \frac{12}{6} + \frac{3}{6} + \frac{13}{6} + \frac{2}{6} = \frac{36}{6} = 6 \text{ pieces}
+   \]
+
+Therefore, Manny should cut his lasagna into \boxed{6} pieces.",6,6.0,False,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,45,44,"Juan bought T-shirts for his employees. He bought shirts for men and women. Women's t-shirts are $5 cheaper than men's t-shirts of the same color. His company has 3 sectors with different t-shirt colors. Two sectors use white t-shirts and black t-shirts. He paid $20 for white men's t-shirts and $18 for black men's t-shirts. He paid $22 for blue men's t-shirts. Each sector has 10 men and 10 women, so there are 60 employees in total. How much did he spend total on buying t-shirts?",1050.0,"To determine the total amount Juan spent on buying t-shirts, we need to calculate the cost for each sector and then sum these costs.
+
+First, let's find the cost of t-shirts for each sector:
+
+**Sector 1: White T-shirts**
+- White men's t-shirts cost $20.
+- White women's t-shirts cost $20 - $5 = $15.
+- Each sector has 10 men and 10 women.
+- The total cost for white t-shirts in Sector 1 is:
+  \[
+  10 \times 20 + 10 \times 15 = 200 + 150 = 350
+  \]
+
+**Sector 2: Black T-shirts**
+- Black men's t-shirts cost $18.
+- Black women's t-shirts cost $18 - $5 = $13.
+- Each sector has 10 men and 10 women.
+- The total cost for black t-shirts in Sector 2 is:
+  \[
+  10 \times 18 + 10 \times 13 = 180 + 130 = 310
+  \]
+
+**Sector 3: Blue T-shirts**
+- Blue men's t-shirts cost $22.
+- Blue women's t-shirts cost $22 - $5 = $17.
+- Each sector has 10 men and 10 women.
+- The total cost for blue t-shirts in Sector 3 is:
+  \[
+  10 \times 22 + 10 \times 17 = 220 + 170 = 390
+  \]
+
+Now, we sum the costs for all three sectors to find the total amount spent:
+\[
+350 + 310 + 390 = 1050
+\]
+
+Therefore, the total amount Juan spent on buying t-shirts is \(\boxed{1050}\).",1050,1050.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,46,45,Bobby has an aquarium with twice as many fish as Sarah's has. Sarah has 5 more fish in her aquarium than Tony does. Tony has 3 times as many fish in his aquarium as Billy does. Billy has 10 fish. Nina has 2 fewer fish in her aquarium than Billy does. How many fish do all the people mentioned have put together?,153.0,"To determine the total number of fish that Bobby, Sarah, Tony, Billy, and Nina have together, we need to follow the relationships given in the problem step by step.
+
+1. **Billy's Fish:**
+   Billy has 10 fish.
+   \[
+   \text{Billy's fish} = 10
+   \]
+
+2. **Tony's Fish:**
+   Tony has 3 times as many fish as Billy.
+   \[
+   \text{Tony's fish} = 3 \times \text{Billy's fish} = 3 \times 10 = 30
+   \]
+
+3. **Sarah's Fish:**
+   Sarah has 5 more fish than Tony.
+   \[
+   \text{Sarah's fish} = \text{Tony's fish} + 5 = 30 + 5 = 35
+   \]
+
+4. **Bobby's Fish:**
+   Bobby has twice as many fish as Sarah.
+   \[
+   \text{Bobby's fish} = 2 \times \text{Sarah's fish} = 2 \times 35 = 70
+   \]
+
+5. **Nina's Fish:**
+   Nina has 2 fewer fish than Billy.
+   \[
+   \text{Nina's fish} = \text{Billy's fish} - 2 = 10 - 2 = 8
+   \]
+
+6. **Total Fish:**
+   To find the total number of fish, we add the number of fish each person has.
+   \[
+   \text{Total fish} = \text{Billy's fish} + \text{Tony's fish} + \text{Sarah's fish} + \text{Bobby's fish} + \text{Nina's fish}
+   \]
+   \[
+   \text{Total fish} = 10 + 30 + 35 + 70 + 8 = 153
+   \]
+
+Therefore, the total number of fish that all the people mentioned have put together is \(\boxed{153}\).",153,153.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,47,46,McKenna has 34 stuffed animals. Kenley has twice as many as McKenna. Tenly has 5 more than Kenley. Riley has 10 fewer stuffed animals than Tenly. How many stuffed animals do all the people mentioned have in all?,238.0,"To determine the total number of stuffed animals that McKenna, Kenley, Tenly, and Riley have, we will calculate the number of stuffed animals each person has step by step.
+
+1. **McKenna's stuffed animals:**
+   McKenna has 34 stuffed animals.
+
+2. **Kenley's stuffed animals:**
+   Kenley has twice as many stuffed animals as McKenna.
+   \[
+   \text{Kenley's stuffed animals} = 2 \times 34 = 68
+   \]
+
+3. **Tenly's stuffed animals:**
+   Tenly has 5 more stuffed animals than Kenley.
+   \[
+   \text{Tenly's stuffed animals} = 68 + 5 = 73
+   \]
+
+4. **Riley's stuffed animals:**
+   Riley has 10 fewer stuffed animals than Tenly.
+   \[
+   \text{Riley's stuffed animals} = 73 - 10 = 63
+   \]
+
+5. **Total number of stuffed animals:**
+   To find the total number of stuffed animals, we add the number of stuffed animals each person has.
+   \[
+   \text{Total} = 34 + 68 + 73 + 63
+   \]
+
+   Let's add these step by step:
+   \[
+   34 + 68 = 102
+   \]
+   \[
+   102 + 73 = 175
+   \]
+   \[
+   175 + 63 = 238
+   \]
+
+Therefore, the total number of stuffed animals that all the people mentioned have is \(\boxed{238}\).",238,238.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,48,47,"Robin wants to buy jelly bracelets for her friends. She decides to buy one bracelet for each letter of the first name of her friends. Her friends are Jessica, Tori, Lily, Patrice, and Ava. If each jelly bracelet costs $2, what is the total she will spend in dollars?",50.0,"To determine the total amount Robin will spend on jelly bracelets, we need to follow these steps:
+
+1. Calculate the number of jelly bracelets needed for each friend.
+2. Sum the total number of jelly bracelets needed.
+3. Multiply the total number of jelly bracelets by the cost of each bracelet.
+
+First, let's calculate the number of jelly bracelets needed for each friend:
+- Jessica has 7 letters.
+- Tori has 4 letters.
+- Lily has 4 letters.
+- Patrice has 7 letters.
+- Ava has 4 letters.
+
+Next, we sum the total number of jelly bracelets needed:
+\[ 7 + 4 + 4 + 7 + 4 = 30 \]
+
+Each jelly bracelet costs $2, so we multiply the total number of jelly bracelets by the cost of each bracelet:
+\[ 30 \times 2 = 60 \]
+
+Therefore, the total amount Robin will spend is \(\boxed{60}\).",60,60.0,False,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,49,48,Monroe has a collection of ants and a collection of spiders. He has 8 spiders and 12 ants. He also has 5 beetles. What is the total number of legs in his entire collection?,166.0,"To determine the total number of legs in Monroe's entire collection, we need to calculate the number of legs for each type of insect and then sum them up.
+
+1. **Calculate the number of legs for the spiders:**
+   - Each spider has 8 legs.
+   - Monroe has 8 spiders.
+   - Total legs for spiders = \( 8 \text{ spiders} \times 8 \text{ legs/spider} = 64 \text{ legs} \).
+
+2. **Calculate the number of legs for the ants:**
+   - Each ant has 6 legs.
+   - Monroe has 12 ants.
+   - Total legs for ants = \( 12 \text{ ants} \times 6 \text{ legs/ant} = 72 \text{ legs} \).
+
+3. **Calculate the number of legs for the beetles:**
+   - Each beetle has 6 legs.
+   - Monroe has 5 beetles.
+   - Total legs for beetles = \( 5 \text{ beetles} \times 6 \text{ legs/beetle} = 30 \text{ legs} \).
+
+4. **Sum the legs of all the insects:**
+   - Total legs = legs for spiders + legs for ants + legs for beetles
+   - Total legs = \( 64 \text{ legs} + 72 \text{ legs} + 30 \text{ legs} = 166 \text{ legs} \).
+
+Therefore, the total number of legs in Monroe's entire collection is \(\boxed{166}\).",166,166.0,True,
+10,qwen2.5-7b,Qwen/Qwen2.5-Math-7B-Instruct,1,50,49,"A gumball machine has red, green, and blue gumballs. The machine has half as many blue gumballs as red gumballs. For each blue gumball, the machine has 4 times as many green gumballs. The machine has as many yellow gumballs as blue gumballs. If the machine has 16 red gumballs how many gumballs are in the machine?",64.0,"To determine the total number of gumballs in the machine, we need to find the number of each color of gumball and then sum them up. Let's start with the information given:
+
+1. The machine has 16 red gumballs.
+2. The machine has half as many blue gumballs as red gumballs.
+3. For each blue gumball, the machine has 4 times as many green gumballs.
+4. The machine has as many yellow gumballs as blue gumballs.
+
+First, we calculate the number of blue gumballs:
+\[
+\text{Number of blue gumballs} = \frac{1}{2} \times \text{Number of red gumballs} = \frac{1}{2} \times 16 = 8
+\]
+
+Next, we calculate the number of green gumballs:
+\[
+\text{Number of green gumballs} = 4 \times \text{Number of blue gumballs} = 4 \times 8 = 32
+\]
+
+Then, we calculate the number of yellow gumballs:
+\[
+\text{Number of yellow gumballs} = \text{Number of blue gumballs} = 8
+\]
+
+Now, we sum up the number of gumballs of each color to find the total number of gumballs in the machine:
+\[
+\text{Total number of gumballs} = \text{Number of red gumballs} + \text{Number of blue gumballs} + \text{Number of green gumballs} + \text{Number of yellow gumballs} = 16 + 8 + 32 + 8 = 64
+\]
+
+Therefore, the total number of gumballs in the machine is:
+\[
+\boxed{64}
+\]",64,64.0,True,
