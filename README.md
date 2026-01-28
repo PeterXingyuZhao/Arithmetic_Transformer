@@ -316,14 +316,14 @@ For pure model scaling, we use the same data as in the regular addition task, wh
 
 Just find the cell under `IV. NanoGPT Scaling`, and run it:
 ```bash
-!python train.py 20M_4_operands_addition_reversed.txt
+!python train.py 20M_4_operands_addition_plain.txt
 ```
 
 This will start training a 20M-parameter NanoGPT model. 
 
 Similarly, for scaling to 100M-parameter, run:
 ```bash
-!python train.py 100M_4_operands_addition_reversed.txt
+!python train.py 100M_4_operands_addition_plain.txt
 ```
 
 ---
