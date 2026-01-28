@@ -46,7 +46,7 @@ def is_perm_1_to_n(spec: str, n: int) -> bool:
         return False
     return set(perm) == set(range(1, n + 1))
 
-def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold"):
+def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold", reasoning_chain: bool = False):
     """Unified parser... (unchanged docstring)"""
 
     if data_format == "comparison":
@@ -54,10 +54,10 @@ def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold"):
     else:
         delimiter = '='
 
-    parts = abc.split(delimiter)
-    if len(parts) != 2:
-        print(f'Invalid format, expected "a+b+c...=result", got: {abc}')
-        return None, None, None
+    if reasoning_chain:
+        parts = abc.rsplit(delimiter,1)
+    else:
+        parts = abc.split(delimiter,1)
 
     operands_str = parts[0]
     if operands_str and operands_str[0] == '$':
@@ -142,7 +142,7 @@ def get_abc_new(abc: str, data_format="plain", mode: str = "compute_gold"):
 
 _precomputed_batches = {}
 def prepare_addition_batches(config, encode, num_digit=3, operator='+', data_format='plain', 
-                             mode: str = "compute_gold", batch_method: str = "per_example"):
+                             mode: str = "compute_gold", batch_method: str = "per_example", reasoning_chain: bool = False):
     device = config['device']
     test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
     start = config['start'] if 'start' in config.keys() else "FILE:prompt/prompt_addition_pad_test_0.01.txt"
@@ -168,18 +168,25 @@ def prepare_addition_batches(config, encode, num_digit=3, operator='+', data_for
         # split off gold answer
         # e.g. line = "123+456=579"
         if batch_method == 'per_example':
-            prompt_str = line.split(delimiter)[0] + delimiter  # keep the delimiter at the end
+            if reasoning_chain:
+                prompt_str = line.rsplit(delimiter, 1)[0] + delimiter  # keep the delimiter at the end
+            else:
+                prompt_str = line.split(delimiter)[0] + delimiter  # keep the delimiter at the end
         else:
             prompt_str = '$' + line.split(delimiter)[0] + delimiter      # "123+456="
         prompt_ids = encode(prompt_str)
-        x = torch.tensor(prompt_ids, dtype=torch.long, device=device)[None, ...]
+        if config.get('reasoning', False) and isinstance(prompt_ids, torch.Tensor):
+            x = prompt_ids.detach().clone().to(dtype=torch.long, device=device)[None, ...]
+        else:
+            x = torch.tensor(prompt_ids, dtype=torch.long, device=device)[None, ...]
         prompt_length = x.size(1)
 
         # parse out gold for evaluation later
         operands, result= get_abc_new(
             line,
             data_format=data_format,
-            mode=mode
+            mode=mode,
+            reasoning_chain=reasoning_chain
         )
 
         entry = (x, operands, result)
@@ -196,7 +203,7 @@ def prepare_addition_batches(config, encode, num_digit=3, operator='+', data_for
     
     # Cache the batches using a hash of the configuration
     config_hash = hash(frozenset({k: str(v) for k, v in config.items() if k != 'device'}.items()))
-    batch_key = f"{config_hash}_{operator}_{num_digit}_{data_format}"
+    batch_key = f"{config_hash}_{operator}_{num_digit}_{data_format}_{reasoning_chain}"
     _precomputed_batches[batch_key] = (batch_list, total)
     
     return batch_list, total
@@ -204,7 +211,7 @@ def prepare_addition_batches(config, encode, num_digit=3, operator='+', data_for
 # Modified evaluation function that uses pre-created batches
 def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
                                   verbose=False, num_digit=3, data_format='plain',operator='+', 
-                                  verbose_correct=False, mode: str = "compute_gold", randomize=None):
+                                  verbose_correct=False, mode: str = "compute_gold", randomize=None, reasoning_chain: bool = False):
     """
     randomize: None | "units" | "tens" | "hundreds" | "thousands"
     If randomize is None: behave exactly as before.
@@ -334,11 +341,14 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
         # Run generation
         with torch.no_grad():
             with ctx:
+                if reasoning_chain:
+                    max_new_tokens = num_digit + 2
                 y = model.generate(
                     x,
                     max_new_tokens,
                     temperature=temperature,
-                    top_k=top_k
+                    top_k=top_k,
+                    eos_token_id = config.get("stop_set", None)
                 )
                 outcome_list = [decode(y_i.tolist()) for y_i in y]
 
@@ -363,10 +373,14 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
                             result = str(result)
 
                     if mode == "read_gold_as_str":
-                        c_hat = outcome.split(delimiter)[1].split('$')[0].strip()
+                        if reasoning_chain:
+                            c_hat = outcome.rsplit(delimiter,1)[1].split('$')[0].strip()
+                        else:
+                            c_hat = outcome.split(delimiter,1)[1].split('$')[0].strip()
 
                         # normalize according to data_format (reverse, permutation, etc.)
-                        c_hat = normalize_by_data_format(c_hat, data_format)
+                        if not config.get('reasoning', False):
+                            c_hat = normalize_by_data_format(c_hat, data_format)
 
                     # --- New: masking/randomize-aware correctness check ---
                     is_correct = False
@@ -419,16 +433,52 @@ def evaluate_addition_precomputed(config, model, ctx, decode, batch_list, total,
 
     accuracy = correct / total * 100
 
+    if config.get("reasoning", False):
+        correct_final = 0
+        for _, result, _, c_hat in correct_examples + incorrect_examples:
+            # result and c_hat are the full strings e.g. "1+1=10(0)+2=2" (or similar if read_gold_as_str)
+            # User wants to compare the LAST output after =
+            # Note: in read_gold_as_str mode, result is the string after the first =, e.g. "10(0)+2=2"
+            # c_hat is also the string after the first =, e.g. "99(9)+2=2"
+            
+            # Defensive splitting
+            try:
+                # Get final answer from result
+                if '=' in result:
+                    res_final = result.rsplit('=', 1)[1].strip()
+                else:
+                    res_final = result.strip()
+                
+                # Get final answer from c_hat
+                if '=' in c_hat:
+                    chat_final = c_hat.rsplit('=', 1)[1].strip()
+                else:
+                    chat_final = c_hat.strip()
+                
+                if res_final == chat_final:
+                    correct_final += 1
+            except Exception:
+                # If splitting fails (e.g. malformed output), valid match is impossible unless identical strings (already covered by correct_examples)
+                # But here we are in the "final match" check. If we can't parse, it's incorrect.
+                pass
+                
+        final_accuracy = correct_final / total * 100
+    else:
+        final_accuracy = None
+
     model.train()
+
+    if config.get("reasoning", False):
+        return accuracy, correct_examples, incorrect_examples, final_accuracy
     return accuracy, correct_examples, incorrect_examples
 
 
 # Keep the original function for backward compatibility, but make it use the new functions
 def evaluate_addition_batch(config, model, ctx, encode, decode, verbose=False, num_digit=3,
                           operator='+', data_format='plain', verbose_correct=False,
-                          mode: str = "compute_gold", batch_method: str = "per_example", randomize=None):
+                          mode: str = "compute_gold", batch_method: str = "per_example", randomize=None, reasoning_chain=False):
     config_hash = hash(frozenset({k: str(v) for k, v in config.items() if k != 'device'}.items()))
-    batch_key = f"{config_hash}_{operator}_{num_digit}_{data_format}"
+    batch_key = f"{config_hash}_{operator}_{num_digit}_{data_format}_{reasoning_chain}"
     
     if batch_key in _precomputed_batches:
         print("Using precomputed batches")
@@ -437,14 +487,14 @@ def evaluate_addition_batch(config, model, ctx, encode, decode, verbose=False, n
         print("Creating new batches")
         batch_list, total = prepare_addition_batches(
             config, encode, num_digit=num_digit, operator=operator, 
-            data_format=data_format, mode=mode, batch_method=batch_method
+            data_format=data_format, mode=mode, batch_method=batch_method, reasoning_chain=reasoning_chain
         )
 
     # Evaluate using the batches
     return evaluate_addition_precomputed(
         config, model, ctx, decode, batch_list, total, verbose=verbose,
         num_digit=num_digit, data_format=data_format,
-        operator=operator, verbose_correct=verbose_correct, mode=mode, randomize=randomize
+        operator=operator, verbose_correct=verbose_correct, mode=mode, randomize=randomize, reasoning_chain=reasoning_chain
     )
 
 def evaluate_multiple_files(config, model, ctx, encode, decode, test_files, iter_num, result_dir,
@@ -475,12 +525,92 @@ def evaluate_multiple_files(config, model, ctx, encode, decode, test_files, iter
         config['start'] = f"FILE:{test_file}"
         
         # Run evaluation
-        accuracy, correct, incorrect = evaluate_addition_batch(
+        eval_result = evaluate_addition_batch(
             config, model, ctx, encode=encode, decode=decode,
             verbose=verbose, num_digit=num_digit,
             operator=operator, data_format=data_format,
             mode=mode, batch_method=batch_method, randomize=randomize
         )
+
+        if len(eval_result) == 4:
+            accuracy, correct, incorrect, final_accuracy = eval_result
+        else:
+            accuracy, correct, incorrect = eval_result
+            final_accuracy = None
+
+        if config.get('reasoning_chain', False):
+            test_names.append(f"{test_name}_reasoning_chain")
+            eval_result_reasoning = evaluate_addition_batch(
+                config, model, ctx, encode=encode, decode=decode,
+                verbose=verbose, num_digit=num_digit, operator=operator,
+                data_format=data_format, mode=mode, batch_method=batch_method, reasoning_chain=True
+            )
+            # Not expecting dual accuracy for reasoning_chain=True based on user request (only reasoning=True)
+            # But defending just in case
+            if len(eval_result_reasoning) == 4:
+                accuracy_reasoning, correct_reasoning, incorrect_reasoning, final_accuracy_reasoning = eval_result_reasoning
+            else:
+                accuracy_reasoning, correct_reasoning, incorrect_reasoning = eval_result_reasoning
+                final_accuracy_reasoning = None
+
+            accuracy_multiple_files[f"{test_name}_reasoning_chain"] = accuracy_reasoning
+            correct_multiple_files[f"{test_name}_reasoning_chain"] = correct_reasoning
+            incorrect_multiple_files[f"{test_name}_reasoning_chain"] = incorrect_reasoning
+            results_file_reasoning = os.path.join(result_dir, f'{test_name}_reasoning_chain_results.csv')
+            # Combine correct and incorrect examples and sort by operands to maintain consistent order
+            all_examples_reasoning = correct_reasoning + incorrect_reasoning
+            all_examples_reasoning.sort(key=lambda x: x[0])  # Sort by operands
+            # Create new DataFrame with operands and actual results
+            new_df_reasoning = pd.DataFrame({
+                'operands': [ex[0] for ex in all_examples_reasoning],
+                'actual': [ex[1] for ex in all_examples_reasoning],
+                f'pred_iter_{iter_num}': [ex[3] for ex in all_examples_reasoning]
+            })
+            # Save results
+            if os.path.exists(results_file_reasoning):
+                old_df_reasoning = pd.read_csv(results_file_reasoning, dtype={'operands': str, 'actual': str}, low_memory=False)
+                # normalize strings
+                for df in (old_df_reasoning, new_df_reasoning):
+                    df['operands'] = df['operands'].astype(str).str.strip()
+                    df['actual']   = df['actual'].fillna('').astype(str).str.strip()
+                # drop exact duplicate rows on key columns to avoid many-to-many merges
+                old_df_reasoning = old_df_reasoning.drop_duplicates(subset=['operands', 'actual'])
+                new_df_reasoning = new_df_reasoning.drop_duplicates(subset=['operands', 'actual'])
+                # set multi-index and join (this avoids Cartesian duplication)
+                old_idx_reasoning = old_df_reasoning.set_index(['operands', 'actual'])
+                new_idx_reasoning = new_df_reasoning.set_index(['operands', 'actual'])
+                # do the join; new columns will be added, existing columns preserved
+                merged_idx_reasoning = old_idx_reasoning.join(new_idx_reasoning, how='outer')
+                # optional: sanity check that the join didn't blow up
+                if len(merged_idx_reasoning) > len(old_idx_reasoning) + len(new_idx_reasoning):
+                    # this is a conservative check; it triggers if many-to-many occurred
+                    print(f"Warning: merged size {len(merged_idx_reasoning)} > old+new ({len(old_idx_reasoning)}+{len(new_idx_reasoning)}) — check duplicate keys!")
+                merged_df_reasoning = merged_idx_reasoning.reset_index()
+            else:
+                merged_df_reasoning = new_df_reasoning
+            # Save results
+            merged_df_reasoning.to_csv(results_file_reasoning, index=False)
+            # Save accuracy separately in a summary file
+            accuracy_file_reasoning = os.path.join(result_dir, f'{test_name}_reasoning_chain_accuracy.csv')
+            if os.path.exists(accuracy_file_reasoning):
+                acc_df_reasoning = pd.read_csv(accuracy_file_reasoning)
+            else:
+                acc_df_reasoning = pd.DataFrame(columns=['iteration', 'accuracy'])
+            
+            # Add new accuracy
+            # If final accuracy exists, save it too
+            new_row_data = {'iteration': [iter_num], 'accuracy': [accuracy_reasoning]}
+            if final_accuracy_reasoning is not None:
+                new_row_data['final_accuracy'] = [final_accuracy_reasoning]
+                
+            new_row_reasoning = pd.DataFrame(new_row_data)
+            # Check if existing df has final_accuracy column, if not add it
+            if 'final_accuracy' in new_row_data and 'final_accuracy' not in acc_df_reasoning.columns:
+                 # Add column with NaNs
+                 acc_df_reasoning['final_accuracy'] = pd.NA
+                 
+            acc_df_reasoning = pd.concat([acc_df_reasoning, new_row_reasoning], ignore_index=True)
+            acc_df_reasoning.to_csv(accuracy_file_reasoning, index=False)    
 
         accuracy_multiple_files[test_name] = accuracy
         correct_multiple_files[test_name] = correct
@@ -546,8 +676,16 @@ def evaluate_multiple_files(config, model, ctx, encode, decode, test_files, iter
         else:
             acc_df = pd.DataFrame(columns=['iteration', 'accuracy'])
         
-        # Add new accuracy
-        new_row = pd.DataFrame({'iteration': [iter_num], 'accuracy': [accuracy]})
+         # Add new accuracy
+        new_row_data = {'iteration': [iter_num], 'accuracy': [accuracy]}
+        if final_accuracy is not None:
+            new_row_data['final_accuracy'] = [final_accuracy]
+            
+        new_row = pd.DataFrame(new_row_data)
+
+        if 'final_accuracy' in new_row_data and 'final_accuracy' not in acc_df.columns:
+            acc_df['final_accuracy'] = pd.NA
+            
         acc_df = pd.concat([acc_df, new_row], ignore_index=True)
         acc_df.to_csv(accuracy_file, index=False)
     

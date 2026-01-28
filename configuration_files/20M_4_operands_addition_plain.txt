@@ -51,10 +51,10 @@ device='cuda:0'
 
 # to edit: the output directory; Path is relative to the project's main directory. 
 # For example, the project's main directory might be "/content/drive/MyDrive/addition/"
-out_dir = '/content/drive/MyDrive/addition_1/4_operands_1M/20M_plain_out'
+out_dir = 'results/4_operands_0_to_999_uniform/20M_plain_out'
 
 # to edit: data directory; Path is relative to the project's main directory. 
-data_dir = '/content/drive/MyDrive/addition/data/4_operands_0_to_999_uniform'
+data_dir = 'data/4_operands_0_to_999_uniform/'
 
 # to edit: training data
 train_data_name = 'train.txt'

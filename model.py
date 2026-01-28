@@ -224,7 +224,7 @@ class GPT(nn.Module):
     return optimizer
 
   @torch.no_grad()
-  def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None):
+  def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None, eos_token_id=None):
     for _ in range(max_new_tokens):
       idx_cond = idx if idx.size(1) <=self.config.block_size else idx[:, -self.config.block_size:]
       # inside generate loop, right after getting logits from model:

@@ -92,6 +92,17 @@ def main():
         required=True,
         help="Which task to generate data for. Supported: " + ", ".join(TASK_MAP.keys()),
     )
+
+    parser.add_argument(
+        "--reasoning_mode",
+        type=int,
+        choices=[1, 2],
+        default=None,
+        help=(
+            "Addition-only. If set to 1 or 2, post-process train/val/test/(train_eval) with "
+            "addition/reasoning_data_gen.py using --mode plain (1) or plain_v2 (2)."
+        ),
+    )
     parser.add_argument(
         "--num_operands",
         type=int,
@@ -204,6 +215,11 @@ def main():
 
 
     args = parser.parse_args()
+
+    # reasoning_mode is only supported for addition
+    if args.reasoning_mode is not None and args.task != "addition":
+        print("Error: --reasoning_mode is only supported when --task is addition.", file=sys.stderr)
+        sys.exit(2)
 
     # Validate num_operands bounds: generators accept up to 6 operands for digit-based tasks.
     if args.num_operands is None:
@@ -548,6 +564,55 @@ def main():
             sys.exit(1)
 
         print("reverse_results finished successfully.")
+
+    # If requested, post-process addition data into "reasoning" format (scratchpad files)
+    if args.reasoning_mode is not None:
+        reasoning_script_rel = os.path.join(
+            "data_generation_script",
+            "individual_task_scripts",
+            "addition",
+            "reasoning_data_gen.py",
+        )
+        reasoning_script = script_abs_path(reasoning_script_rel)
+        if not os.path.exists(reasoning_script):
+            print(f"reasoning_data_gen.py not found at {reasoning_script}", file=sys.stderr)
+            sys.exit(8)
+
+        mode_flag = "plain" if args.reasoning_mode == 1 else "plain_v2"
+        scratchpad_suffix = f"scratchpad{args.reasoning_mode}"
+
+        split_files = ["train.txt", "val.txt", "test.txt"]
+        if args.train_eval:
+            split_files.append("train_eval.txt")
+
+        # Ensure all required input files exist before starting
+        missing = [f for f in split_files if not os.path.exists(os.path.join(output_path, f))]
+        if missing:
+            print(f"Missing files required for reasoning post-process: {missing}", file=sys.stderr)
+            sys.exit(9)
+
+        print(
+            f"Running reasoning post-process for addition with reasoning_mode={args.reasoning_mode} "
+            f"(mode={mode_flag})"
+        )
+
+        for fname in split_files:
+            in_file = os.path.join(output_path, fname)
+
+            # train.txt -> train_scratchpad1.txt (or scratchpad2)
+            out_fname = fname.replace(".txt", f"_{scratchpad_suffix}.txt")
+            out_file = os.path.join(output_path, out_fname)
+
+            cmd = [
+                sys.executable,
+                reasoning_script,
+                "--input_file_path", in_file,
+                "--output_file_path", out_file,
+                "--mode", mode_flag,
+            ]
+            run_subprocess(cmd)
+
+        print("Reasoning post-process finished successfully.")
 
 
 if __name__ == "__main__":

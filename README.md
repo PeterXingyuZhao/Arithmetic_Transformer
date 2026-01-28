@@ -1,7 +1,7 @@
 # Arithmetic Transformer — README
 
 This repo is intended for generating synthetic datasets and training NanoGPTs on arithmetic tasks (including addition, simple multiplication, comparison, sorting).
-This README documents repository layout, a concise quickstart (generate data → (optional) update a config → train → evaluate), and more detailed guide on how to reproduce the results in our paper .
+This README documents repository layout, a concise quickstart (generate data → (optional) update a config → train → evaluate), and more detailed guide on how to reproduce the major results in our paper .
 
 ---
 
@@ -314,17 +314,19 @@ The script will output the swap, repeat & mixing error rate for each training st
 ### 3.5 NanoGPT Scaling
 For pure model scaling, we use the same data as in the regular addition task, which is generated in `3.1.1 Generate data`.
 
-Just find the cell under `IV. NanoGPT Scaling`, and run it:
+To start training, go to `II. Let's Start Training!` section of the notebook. Find the cell under `NanoGPT Scaling (20M)`, and run it:
 ```bash
 !python train.py 20M_4_operands_addition_plain.txt
 ```
 
 This will start training a 20M-parameter NanoGPT model. 
 
-Similarly, for scaling to 100M-parameter, run:
+Similarly, for scaling to 100M-parameter, find the cell under `NanoGPT Scaling (100M)`, and run it:
 ```bash
 !python train.py 100M_4_operands_addition_plain.txt
 ```
+
+For result analysis, see `3.8.3 Result analysis`. 
 
 ---
 
@@ -349,3 +351,73 @@ Once you've configured these, just run the cells **top-to-bottom** (one by one).
 
 ---
 
+### 3.7 Training Addition with Scratchpad
+#### 3.7.1 Generate data
+To train models with scrachpad, first go to `I. Generate Data` section of the notebook -- `startHere.ipynb`.
+
+For D scratchpad, find the cell under `Addition with scratchpad (form 1)`, and run it:
+```bash
+!python data_generate.py --task addition --reasoning_mode 1 --num_operands 4 --experiment_name 4_operands_0_to_999_uniform_scratchpad1 --train_size 1000000 --test_size 10000 --val_size 10000 --train_eval True --sample-size 10000 --generate_reverse True
+```
+
+This should generate the scratchpad-added train/val/test data under `data/4_operands_0_to_999_uniform_scratchpad1/`, which are named `train_scratchpad1.txt`, `val_scratchpad1.txt`, `test_scratchpad1.txt` respectively.
+
+For D+A scratchpad, find the cell under `Addition with scratchpad (form 2)`, and run it:
+```bash
+!python data_generate.py --task addition --reasoning_mode 2 --num_operands 4 --experiment_name 4_operands_0_to_999_uniform_scratchpad2 --train_size 1000000 --test_size 10000 --val_size 10000 --train_eval True --sample-size 10000 --generate_reverse True
+```
+
+This should generate the scratchpad-added train/val/test data under `data/4_operands_0_to_999_uniform_scratchpad2/`, which are named `train_scratchpad2.txt`, `val_scratchpad2.txt`, `test_scratchpad2.txt` respectively.
+
+#### 3.7.2 Start trainng
+Go to `II. Let's Start Training!` section of the notebook. 
+
+If to train with D scratchpad, find the cell under `Scratchpad Form 1`, and run it:
+```bash
+!python train.py 4_operands_addition_plain_scratchpad1.txt
+```
+
+If to train with D+A scratchpad, find the cell under `Scratchpad Form 2`, and run it:
+```bash
+!python train.py 4_operands_addition_plain_scratchpad2.txt
+```
+
+For result analysis, see `3.8.3 Result analysis`.
+
+#### 3.7.3 Result analysis
+
+### 3.8 Finetuning Pythia on Addition Task
+#### 3.8.1 Generate data
+
+For our Pythia finetuning on addition, we use the same data as our regular addition test/val/test data in plain output format, which is generated `3.1.1`.
+
+#### 3.8.2 Start training
+
+To start training, go to `II. Let's Start Training!` section of the notebook. Find the cell under `Pythia Finetuning ` and run it:
+```bash
+!python train.py 4_operands_addition_plain_pythia.txt
+```
+#### 3.8.3 Result analysis
+In this section, we'll plot a bar gragh that shows digit-wise error rates at a fixed training step, for NanoGPT scaling, Pythia finetuning and training with two forms of scratchpad.
+
+As before, the key is to locate all the test result csv files we need.
+
+| Experiment | Test result csv filename | Location |
+| ------- | ------- | ------- |
+| NanoGPT Scaling 20M | test_results.csv | `results\4_operands_0_to_999_uniform/20M_plain_out` |
+| NanoGPT Scaling 100M | test_results.csv | `results\4_operands_0_to_999_uniform/100M_plain_out` |
+| Pythia Finuning | test_results.csv | `results\4_operands_0_to_999_uniform/plain_out_pythia` |
+| Scratchpad D | test_scratchpad1_results.csv | `results\4_operands_0_to_999_uniform_scratchpad1` |
+| Scratchpad D+A | test_scratchpad2_results.csv | `results\4_operands_0_to_999_uniform_scratchpad2` |
+
+Once we find their paths, go to `III. Result Analysis` section of the notebook. Find the cell under `Scaling, Scratchpad, and Pythia finetuning`, and run it:
+```bash
+python scaling_scratchpad_finetuning.py \
+  --test "20M NanoGPT" path/to/test_results.csv 20000 False \
+  --test "100M NanoGPT" path/to/test_results.csv 50000 False \
+  --test "Pyhtia 1B" path/to/test_results.csv 30000 False \
+  --test "Scratchpad D" path/to/test_scratchpad1_results.csv 4500 True \
+  --test "Scratchpad A + D" path/to/test_scratchpad2_results.csv 500 True
+```
+
+This will produce a bar plot that shows the digit-wise error rates for the 20M-parameter NanoGPT, 100M-parameter NanoGPT, finetuning a pretrained Pythia-1B model, training with D scratchpad, and training with D+A scratchpad, at training step 20000, 50000, 30000, 4500, and 500 respectively.

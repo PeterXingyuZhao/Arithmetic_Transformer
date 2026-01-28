@@ -1,0 +1,90 @@
+# Pythia-1B Configuration for 4-Operand Addition Task
+# This config fine-tunes EleutherAI's Pythia-1B model on arithmetic tasks
+
+# ===== Model Selection ===== #
+use_llama = True  # Set to True to use pre-trained model
+llama_model_name = "EleutherAI/pythia-1b"
+
+# ===== Evaluation Settings ===== #
+eval_interval = 2000  # More frequent eval for smaller model
+eval_iters = 1
+always_save_checkpoint = True
+
+more_early_eval1 = True  # Enable frequent early evaluation
+early_eval_interval1 = 25  # Evaluate every 25 iterations early on
+early_eval_border1 = 100  # Until iteration 1000
+
+# ===== WandB Logging ===== #
+wandb_log = True
+wandb_project = 'addition_pythia'
+wandb_run_name = '4_operands_addition_plain_pythia_1b'
+
+# ===== Model Architecture (Pythia-specific) ===== #
+block_size = 64  # Larger for BPE efficiency
+dropout = 0.1  # Light dropout for fine-tuning
+
+# ===== Training Configuration ===== #
+# Pythia-1B is smaller than LLaMA-8B, so we can use larger batch size
+batch_size = 512  # Can use larger batch than LLaMA (was 64 for LLaMA-8B)
+gradient_accumulation_steps = 1
+
+# ===== Data Format ===== #
+data_format = 'plain'
+operator = '+'
+dataset = 'bal'
+
+# ===== Initialization ===== #
+# Always use 'scratch' when using pre-trained models - loads pre-trained weights then fine-tunes
+init_from = 'scratch'
+iter_num = 0
+# To resume fine-tuning, change to: init_from = 'resume'
+ckpt_path_name = 'ckpt.pt'
+
+# ===== Task Settings ===== #
+num_digit = 3
+max_new_tokens = 6  # BPE needs fewer tokens than character-level
+drop_leading_digit = False
+zero_pad = False
+
+# ===== Learning Rate (Lower for Fine-tuning) ===== #
+learning_rate = 1e-4  # Lower than custom GPT
+max_iters =  200000 # Pythia-1B may converge faster than LLaMA-8B
+lr_decay_iters = 200000
+beta1 = 0.9
+beta2 = 0.98 # Higher beta2 for fine-tuning
+warmup_iters = 500
+grad_clip = 1.0
+
+# ===== Device ===== #
+device = 'cuda:0'
+dtype = 'bfloat16'  # Use bfloat16 for efficiency
+compile = True  # Use PyTorch 2.0 compile
+
+# ===== Paths ===== #
+out_dir = 'results/4_operands_0_to_999_uniform/plain_out_pythia'
+data_dir = 'data/4_operands_0_to_999_uniform/'
+
+# to edit: training data
+train_data_name = 'train.txt'
+
+# to edit: whether do evaluation on training data to see if the model is simply memorizing
+eval_addition_train = True
+train_data_test_name = "train_eval.txt"
+
+# to edit: validation data
+val_data_name = 'val.txt'
+eval_addition = True
+test_file_name = 'test.txt'
+main_test_name = "test"
+
+
+# Mode for evaluation: "compute_gold" or "read_gold_as_str"
+mode = "read_gold_as_str"
+
+# ===== Statistical Measurements ===== #
+# Disable MI measurement (not yet adapted for BPE tokenization)
+mi_measurement = False
+
+save_final = True
+use_flash = True  # Will try Flash Attention, fallback to standard if unavailable
+

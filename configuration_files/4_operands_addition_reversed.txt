@@ -51,7 +51,7 @@ device='cuda:0'
 
 # to edit: the output directory; Path is relative to the project's main directory. 
 # For example, the project's main directory might be "/content/drive/MyDrive/addition/"
-out_dir = 'results/4_operands_0_to_999_uniform/reverse_out_complete_MI_1M_lines'
+out_dir = 'results/4_operands_0_to_999_uniform/reverse_out'
 
 # to edit: data directory; Path is relative to the project's main directory. 
 data_dir = 'data/4_operands_0_to_999_uniform/'

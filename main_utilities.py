@@ -280,3 +280,38 @@ def create_meta_for_addition(data, batch_method='per_example'):
         'itos': itos
     }
     return meta, data_encoder, data_decoder
+
+def create_meta_for_llama(model_name="meta-llama/Meta-Llama-3.1-8B"):
+    """
+    Create metadata for LLaMA tokenizer.
+
+    This function wraps the LLaMA tokenizer to provide the same interface
+    as create_meta_for_addition, making it compatible with the existing
+    training and evaluation pipeline.
+
+    Args:
+        model_name: HuggingFace model identifier for LLaMA
+
+    Returns:
+        tuple: (meta, data_encoder, data_decoder)
+            - meta: Dictionary with vocab_size, tokenizer reference, and placeholder stoi/itos
+            - data_encoder: Function that encodes text to numpy array of token IDs
+            - data_decoder: Function that decodes token IDs to text
+    """
+    from llama_tokenizer import LlamaTokenizerWrapper
+
+    # Initialize tokenizer wrapper
+    wrapper = LlamaTokenizerWrapper(model_name)
+    meta = wrapper.create_meta()
+
+    def data_encoder(s):
+        """Encode text to token IDs (as numpy array)."""
+        token_ids = wrapper.encode(s)
+        # Convert to numpy array for consistency with char-level encoder
+        return np.array(token_ids, dtype=np.int32)
+
+    def data_decoder(token_ids):
+        """Decode token IDs to text."""
+        return wrapper.decode(token_ids)
+
+    return meta, data_encoder, data_decoder
