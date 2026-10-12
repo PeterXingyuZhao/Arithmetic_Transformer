@@ -1,423 +1,105 @@
-# Arithmetic Transformer — README
+# Shattered Compositionality
 
-This repo is intended for generating synthetic datasets and training NanoGPTs on arithmetic tasks (including addition, simple multiplication, comparison, sorting).
-This README documents repository layout, a concise quickstart (generate data → (optional) update a config → train → evaluate), and more detailed guide on how to reproduce the major results in our paper .
+### Counterintuitive Learning Dynamics of Transformers for Arithmetic
 
----
+**Xingyu Zhao, Darsh Sharma, Rheeya Uppaal, and Yiqiao Zhong**
 
-## 1 — At a glance / repo layout
+University of Wisconsin–Madison · **NeurIPS 2026, accepted**
 
-Important files & folders (high level):
+[**Paper**](https://arxiv.org/abs/2601.22510) · [**Blog post by Yiqiao Zhong**](https://yiqiao-zhong.github.io/jekyll/update/2026/02/08/shattered-compositionality.html) · [**Reproduction guide**](docs/reproduction.md) · [**Citation**](#citation)
 
-- `data_generate.py` — script for generating training/val/test data. Highly automated.
+**How do transformers learn to put simpler skills together?** We study this question by training transformers on addition, multiplication, comparison, and sorting, then tracking individual subskills throughout training. These controlled tasks let us examine both *when* a skill emerges and *how the training distribution shapes its acquisition*.
 
-- `data/` — directory for storing datasets. Each task should get its own subdirectory (e.g. 4_operands_0_to_999_uniform).
+We find that subskills often develop in reverse or in parallel relative to standard arithmetic procedures. Partially learned skills can then compete, producing fragile combinations and characteristic errors. We call this failure mode **shattered compositionality**.
 
-- `configuration_files/` — directory for storing prototype config files. Edit one for your task (e.g. 4_operands_addition_plain.txt).
+This repository contains the synthetic-data generators, training code, evaluation tools, and analysis scripts used in the paper. For an accessible introduction to the motivation and results, start with [the accompanying blog post](https://yiqiao-zhong.github.io/jekyll/update/2026/02/08/shattered-compositionality.html).
 
-- `train.py` — (entry point) training script.
+## A surprising example: which digit is learned first?
 
-- `evaluation.py`  — evaluation utilities.
+Consider four-operand addition:
 
-- `statistical_measurements.py` - Mutual Information metric
-
-- `result_analysis_script/` — directory for storing training result analysis scripts
-
-- `results/` — directory for storing training outputs (e.g.training dynamics, model checkpoints).
-
-- `startHere.ipynb` — quick-start notebook, actual commands you'll run.
-
-- other utilities: model.py, main_utilities.py, configurator.py.
-
----
-
-## 2 — Quickstart example (4-operand 0–999 addition, plain format)
-
-Go inside `startHere.ipynb`.
-Follow two simple steps to get the model start training.
-
-### 2.1 Generate data (training, val & test)
-Go to `I. Generate Data` secition of the notebook.
-Choose one synthetic task (e.g. addition), and run the corresponding data generation command.
-
-For 4 operand addition (including both plain and reverse output format), find this cell and run it:
-
-
-```bash
-!python data_generate.py --task addition --num_operands 4 --experiment_name 4_operands_0_to_999_uniform --train_size 1000000 --test_size 10000 --val_size 10000 --train_eval True --sample-size 10000 --generate_reverse True
-```
----
-
-### 2.2 Start training
-Go to `II. Let's Start Training!` section of the notebook. Find this cell and run it. Trainig will start.
-
-```bash
-!python train.py 4_operands_addition_plain.txt
-```
-The training results, including training dynamics and saved checkpoints will be stored under `results/4_operands_0_to_999_uniform/plain_out` directory. 
-
-Note: Depending on the number of runs you've initiated, there may be further subdirectory under it. So you may have to look inside  `results/4_operands_0_to_999_uniform/.../.../`. The `test_results.csv` is the saved training dynamics, which will be **crucial** in our later result analysis.
-
----
-
-### 2.3 Result Analysis
-The training code you've run in `2.2 Start training` is supposed to print a digit-wise error vs training steps figure automatically once training finishes. That figure would appear under the same directory as the one `test_results.csv` is located.
-
-If you do not see the digit-wise error figure, let's run a result analysis script directly. 
-Go to `III. Result Analysis` section of the notebook.
-
-Find the cell under "Digitwise Error Rates" and run it:
-```bash
-!python result_analysis_script/digitwise_error.py path/to/results.csv
-```
-The printed figure should appear under the same directory as where the result csv file is located.
-
----
-
-## 3 — Detailed guide on reproducing
-
-This section provides detailed instruction on how to reproduce all the main results in our paper.
-
-### 3.1 Addition
-#### 3.1.1 Generate data
-Go to `I. Generate Data` secition of the notebook. Find this cell under `Addition`, and run it:
-```bash
-!python data_generate.py --task addition --num_operands 4 --experiment_name 4_operands_0_to_999_uniform --train_size 1000000 --test_size 10000 --val_size 10000 --train_eval True --sample-size 10000 --generate_reverse True
+```text
+Ordinary output:  349 + 102 + 382 + 907 = 1740
+Reversed output:  349 + 102 + 382 + 907 = 0471
 ```
 
-If you want the thousands-place of the output randomized data (our ablation study), run this cell instead:
+Standard column addition starts at the units place and propagates carries toward higher places. In our main experiments, transformers instead become accurate at the **thousands-place digit before the lower-place digits**. Reversing the answer format does not reverse this acquisition pattern.
 
-```bash
-!python data_generate.py --task addition --randomize thousands --num_operands 4 --experiment_name 4_operands_0_to_999_output_randomize_thousands --train_size 1000000 --test_size 10000 --val_size 10000 --train_eval True --sample-size 10000 --generate_reverse True
+<table>
+  <tr>
+    <th>Ordinary output order</th>
+    <th>Reversed output order</th>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/addition-plain.png" width="460" alt="Digit-wise error during addition training with ordinary output order. Higher-place digits become accurate before lower-place digits."></td>
+    <td><img src="docs/assets/addition-reversed.png" width="460" alt="Digit-wise error with reversed output order. Higher-place digits are still learned first, with longer plateaus before lower-place digits become accurate."></td>
+  </tr>
+</table>
+
+*Figure 1 from the paper. Each curve tracks the error rate for one answer digit across training checkpoints; the legend applies to both panels. Learning order here means when digit-level skills become reliable during training, not the order of internal calculations in a trained model.*
+
+## What we found
+
+1. **Skill acquisition need not follow the task's procedural hierarchy.** Addition exhibits higher-place-first learning, while multiplication shows a bidirectional pattern: learning spreads from the most significant end and the units digit is acquired early in parallel. In sorting, models learn coarse length information early and then learn multiple digit-wise ranking skills concurrently.
+
+2. **Training-data correlations help explain the learning trajectories.** We develop mutual-information diagnostics for dependencies among input digits, output digits, and carries. Their evolution aligns with changes in digit accuracy and training loss. Targeted ablations, including randomizing higher-place targets and masking selected digit losses while keeping targets correct, show that disrupting earlier-acquired signals can hinder later subskills.
+
+3. **Partially learned skills can interfere.** In comparison, performance on targeted test pairs can temporarily worsen as another subskill emerges. In sorting, conflicting digit-level cues can produce *mixing errors*: the model combines digits from different inputs into numbers that were never in the input list.
+
+4. **Scaling and scratchpads do not automatically restore the standard hierarchy.** We examine alternative positional encodings, roughly 10M–100M-parameter NanoGPT models, Pythia-1B fine-tuning, and two scratchpad formats. The tested scratchpads can accelerate convergence substantially while still yielding noncanonical skill acquisition.
+
+5. **Related brittleness appears in modern LLMs.** We evaluate 10 pretrained LLMs on 50 GSM8K-derived templates with additional arithmetic clauses. Each model shows an overall accuracy decline as the number of clauses increases; recurring errors include omitting or repeating terms in a summation.
+
+Together, these results support **correlational matching** as an explanation for the observed dynamics: the statistical signals available in the training data can favor a learning trajectory that differs from the task's standard decomposition. Our diagnostics are behavioral and model-agnostic; they do not identify the neural circuits implementing these behaviors. The LLM evaluation establishes related compositional brittleness, not an identical underlying mechanism.
+
+## Exploring the experiments
+
+| Research question | Experiment | Where to start |
+| --- | --- | --- |
+| Which answer digits become accurate first? | Addition and multiplication; ordinary and reversed outputs | [Addition](docs/reproduction.md#31-addition), [multiplication](docs/reproduction.md#32-simple-multiplication) |
+| How do data correlations relate to acquisition? | Information-theoretic diagnostics and randomized-target addition ablations | [`statistical_measurements.py`](statistical_measurements.py), [addition guide](docs/reproduction.md#31-addition) |
+| When do useful subskills compete? | Controlled comparison and sorting tests | [Comparison](docs/reproduction.md#33-comparison), [sorting](docs/reproduction.md#34-sorting) |
+| What changes with scale, pretraining, or reasoning traces? | Larger NanoGPTs, Pythia-1B, and scratchpad training | [Scaling](docs/reproduction.md#35-nanogpt-scaling), [scratchpads](docs/reproduction.md#37-training-addition-with-scratchpad), [Pythia](docs/reproduction.md#38-fine-tuning-pythia-on-addition) |
+| How robust are LLMs to added arithmetic clauses? | Clause-extended GSM8K evaluation | [LLM evaluation guide](docs/reproduction.md#36-extended-gsm-50-questions-evaluation), [`gsm_test/`](gsm_test/) |
+
+## Reproducing the results
+
+Start with the [setup and four-operand addition walkthrough](docs/reproduction.md#2--quickstart-example-4-operand-0999-addition-plain-format), then use the task-specific sections for the remaining experiments. The guide preserves the detailed data-generation, training, and analysis instructions.
+
+The overview summarizes the final paper; the guide documents the experiments supported by the current release. See the paper for additional loss-masking controls.
+
+- [`startHere.ipynb`](startHere.ipynb) organizes the main workflow: generate data → train → analyze checkpoints and predictions.
+- [`configuration_files/`](configuration_files/) contains experiment settings. Review paths, device selection, training duration, and Weights & Biases settings before a run.
+- Training configurations target CUDA GPUs. The paper-scale experiments are full training runs; the plots above can be inspected without running them.
+
+### Repository map
+
+| Path | Purpose |
+| --- | --- |
+| [`data_generate.py`](data_generate.py), [`data_generation_script/`](data_generation_script/) | Generate synthetic training, validation, and controlled test sets |
+| [`train.py`](train.py), [`configuration_files/`](configuration_files/) | Train models and configure experiments |
+| [`model.py`](model.py), [`model_rope.py`](model_rope.py), [`model_t5bias.py`](model_t5bias.py) | Transformer implementations and positional-encoding variants |
+| [`evaluation.py`](evaluation.py), [`statistical_measurements.py`](statistical_measurements.py) | Evaluate predictions and compute information-theoretic diagnostics |
+| [`result_analysis_script/`](result_analysis_script/) | Plot digit-wise learning curves, error distributions, skill acquisition, and mixing errors |
+| [`gsm_test/`](gsm_test/) | Evaluate pretrained LLMs on clause-extended GSM8K problems |
+| `data/`, `results/` | Locally generated datasets, checkpoints, prediction CSVs, and plots |
+
+## Citation
+
+If you use this work or its code, please cite:
+
+```bibtex
+@misc{zhao2026shatteredcompositionality,
+  title         = {Shattered Compositionality: Counterintuitive Learning Dynamics of Transformers for Arithmetic},
+  author        = {Xingyu Zhao and Darsh Sharma and Rheeya Uppaal and Yiqiao Zhong},
+  year          = {2026},
+  eprint        = {2601.22510},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2601.22510}
+}
 ```
 
-#### 3.1.2 Start trainng
-Go to `II. Let's Start Training!` section of the notebook. 
-Find this cell under `4 Operands Addition`, and run the corresponding output format you'd like.
+## Acknowledgments
 
-For plain output format, run:
-```bash
-!python train.py 4_operands_addition_plain.txt
-```
-
-For reverse output format, run:
-```bash
-!python train.py 4_operands_addition_reversed.txt
-```
-#### 3.1.3 Result analysis
-For most result analysis scripts, one of the required input argument is the path to the test result csv file you'd like to be analyzed. That test result csv file is updated as training progresses and is stored under `results/experiment_name/` directory, where `experiment_name` is the one you provided to `data_generate.py` when generating data. If you had used the default data generation script we provided in `startHere.ipynb`, they have the following names:
-
-| Task    | Default Experiment Name |
-| -------- | ------- |
-| Addition  | 4_operands_0_to_999_uniform    |
-| Addition (ablation) | 4_operands_0_to_999_output_randomize_thousands     |
-| Multiplication    | 40_digit_times_1_digit    |
-| Comparison    | comparison_bal    |
-| Sorting    | 4_operands_sorting_doubly_balanced    |
-
-Once you've determined the path to the stored test result csv file, go to `III. Result Analysis` section of the notebook.
-
-For digit-wise error rate vs training steps analysis, run:
-```bash
-!python result_analysis_script/digitwise_error.py path/to/results.csv
-```
-
-For normal fitting of prediction error distribution, run the following three.
-
-Training step 1,000 to 1,800:
-```bash
-!python result_analysis_script/fit_normal.py \
-  --input path/to/results.csv \
-  --iter-start 1000 --iter-end 1800 --iter-step 200 \
-  --diff-min -800 --diff-max 800
-```
-
-Training step 8,000 to 12,000:
-```bash
-!python result_analysis_script/fit_normal.py \
-  --input path/to/results.csv \
-  --iter-start 8000 --iter-end 12000 --iter-step 2000 \
-  --diff-min -100 --diff-max 100
-```
-
-Training step 60,000 to 64,000:
-```bash
-!python result_analysis_script/fit_normal.py \
-  --input input path/to/results.csv \
-  --iter-start 60000 --iter-end 64000 --iter-step 2000 \
-  --diff-min -20 --diff-max 20
-```
-
-Since the phase change might happen at different training steps for each training run, you may have to adjust the corresponding `--iter-start` and `--iter-end` based on the actual timing. (You may use "digit-wise error rate" figure to help decide the actual timing.)
-
----
-
-### 3.2 Simple Multiplication
-#### 3.2.1 Generate data
-Go to `I. Generate Data` section of the notebook. Find the cell under `Multiplication` and run it:
-```bash
-!python data_generate.py --task multiplication --experiment_name 40_digit_times_1_digit --train_size 1000000 --test_size 10000 --val_size 10000 \
---a_max_digits 40 --b_max_digits 1 --train_eval True --sample-size 10000 --generate_reverse True
-```
-
-This will generate the 40-digit times 1-digit multiplication data.
-
-#### 3.2.2 Start trainng
-Go to `II. Let's Start Training!` section of the notebook. 
-Find this cell under `Simpel Multiplication`, and run the corresponding output format you'd like.
-
-For plain output format, run:
-```bash
-!python train.py 40_1_digits_mul_plain.txt
-```
-
-For reverse output format, run:
-```bash
-!python train.py 40_1_digits_mul_reversed.txt
-```
-
-#### 3.2.3 Result analysis
-As before we need the test result csv file from `results/experiment_name/` directory (there may be further subdirectories) to run result analysis script on.
-
-Once you've located the csv file, go to `III. Result Analysis` section of the notebook. Find the cell under `Simple Multiplication Task`, and run:
-```bash
-!python result_analysis_script/mul_digitwise_error_colormap.py path/to/results.csv
-```
-
----
-
-### 3.3 Comparison
-#### 3.3.1 Generate data
-Go to `I. Generate Data` section of the notebook. Find the cell `Comparison (Balanced data)` and run it:
-```bash
-!python data_generate.py --task comparison --experiment_name comparison_bal --train_eval True --sample-size 5000
-```
-This will generate the balanced training/val/test comparison data (which is composed of NCID Group 0-4). The script will also generate several additional test files under `data/comparison_bal/test` directory. 
-
-| Test filename    | Constraint |
-| -------- | ------- |
-| `thousands_diff_only.txt`  | $a_1 \ne b_1;\ a_{j\ne 1}=b_j$    |
-| `hundreds_diff_only.txt` | $a_2 \ne b_2;\ a_{j\ne 2}=b_j$     |
-| `tens_diff_only.txt`    | $a_3 \ne b_3;\ a_{j\ne 3}=b_j$    |
-| `units_diff_only.txt`    | $a_4 \ne b_4;\ a_{j\ne 4}=b_j$    |
-| `thousands.txt`    | No guaranteed match    |
-| `hundreds.txt`    | $a_1 = b_1$    |
-| `tens.txt`    | $a_{1:2} = b_{1:2}$    |
-| `units.txt`    | $a_{1:3} = b_{1:3}$    |
-| `equal.txt`    | $a_{1:4} = b_{1:4}$    |
-
-
-#### 3.3.2 Start trainng
-Go to `II. Let's Start Training!` section of the notebook. Find the cell under `Comparison`, and run it:
-```bash
-!python train.py comparison_bal.txt
-``` 
-
-#### 3.3.3 Result analysis
-Since we have a few extra test files, we have to use all of their corresponding test result csv files for result analysis. For example, to show how Contrast Pairs error rates change with training steps, we have to use the following under the `results/experiment_name/` folder (there may be further subfolders):
-
-| Test Result CSV Filename |
-| ------- |
-| thousands_diff_only_results.csv |
-| hundreds_diff_only_results.csv |
-| tens_diff_only_results.csv |
-| units_diff_only_results.csv |
-
-Once we have located them, go to `III. Result Analysis` section of the notebook. Find the cell under `Comparison Task` and run it with the paths to the above csv files:
-```bash
-!python result_analysis_script/comparison_error_rate.py \
-  path/to/thousands_diff_only_results.csv \
-  path/to/hundreds_diff_only_results.csv \
-  path/to/tens_diff_only_results.csv \
-  path/to/units_diff_only_results.csv \
-  --output_file_name contrast_pair_error_rate
-```
-
----
-
-
-### 3.4 Sorting
-#### 3.4.1 Generate data
-Go to `I. Generate Data` section of the notebook. Find the cell under `Sorting (Doubly balanced data)` and run:
-```bash
-!python data_generate.py --task sorting --experiment_name 4_operands_sorting_doubly_balanced --train_eval True --sample-size 5000
-```
-This will generate the doubly balanced training/eval/test data, which is both length balanced and is composed of NCID Group 0 to 2. In addition to the regular `test.txt`, the script will also generate a few extra test files under `data/4_operands_sorting_doubly_balanced/test` for later subskill learning order and mixing error analysis.
-
-For all sorting data, we have 4 numbers to be sorted. Denote them as $a,b,c,d$. Except for the regular `test.txt` where each input number has equal probability be 3-digit & 4-digit. The numbers in the rest additional test files are all 4-digit, i.e. $l(a, b, c, d) = (4, 4, 4, 4)$. The following table summarizes each additinal test file. (We omitted the length contraint below)
-
-| Test filename    | Constraint |
-| -------- | ------- |
-| `digitwise_random.txt`  | No guaranteed match    |
-| `digitwise_thousand.txt` | $a_1=b_1=c_1=d_1$     |
-| `digitwise_hundred.txt`    | $a_{1:2}=b_{1:2}=c_{1:2}=d_{1:2}$    |
-| `digitwise_ten.txt`    | $a_{1:3}=b_{1:3}=c_{1:3}=d_{1:3}$    |
-| `1_3_same_2_4_agreeing.txt`    | $a=1000,b_1=c_1, sgn(b_2 − c_2) · sgn(b_4 − c_4) = 1, b_3=c_3,d=9999$    |
-| `1_3_same_2_4_conflicting.txt`    | $a=1000,b_1=c_1, sgn(b_2 − c_2) · sgn(b_4 − c_4) = -1, b_3=c_3,d=9999$    |
-| `b1_eq_b3diff.txt`    | $a=1000,b_1=c_1, sgn(b_2 − c_2) · sgn(b_4 − c_4) = -1, b_3 \neq c_3,d=9999$    |
-| `b3_eq_b1diff.txt`    | $a=1000,b_1 \neq c_1, sgn(b_2 − c_2) · sgn(b_4 − c_4) = -1, b_3 =c_3, d=9999$    |
-| `b1c1_b3c3_bothdiff.txt`    | $a=1000,b_1 \neq c_1, sgn(b_2 − c_2) · sgn(b_4 − c_4) = -1, b_3 \neq c_3, d=9999$    |
-
-
-#### 3.4.2 Start trainng
-Go to `II. Let's Start Training!` section of the notebook. Find the cell under `Sorting` and run it: 
-```bash
-!python train.py 4_operands_sorting_doubly_bal.txt
-```
-
-#### 3.4.3 Result analysis
-As before we need different test result csv files under `results/experiment_name/` for different result analysis.
-
-Specifically, for determining subskill learning order, we will use:
-
-| Test Result CSV Filename | Subskill assessed |
-| ------- | ------- |
-| test_results.csv | Length comparison|
-| digitwise_random_results.csv | First digit comparison |
-| digitwise_thousand_results.csv | Second digit comparison |
-| digitwise_hundred_results.csv | Third digit comparison |
-| digitwise_ten_results.csv | Fourth digit comparison |
-
-For the conflicting vs agreeing pair mixing error analysis, we will use:
-
-| Test Result CSV Filename | Condition |
-| ------- | ------- |
-| 1_3_same_2_4_agreeing_results.csv | Conflicting in $(b_2,c_2)$ and $(b_4, c_4)$ |
-| 1_3_same_2_4_conflicting_results.csv | Agreeing in $(b_2,c_2)$ and $(b_4, c_4)$ |
-
-Once we've located these csv files, go to `III. Result Analysis` section of the notebook. Find the cell under `Sorting Subskill from 10% to 90% Range`, and run it:
-```bash
-!python result_analysis_script/sorting_acc_10_90_range.py \
-  --csv \
-    path/to/test_results.csv \
-    path/to/digitwise_random_results.csv \
-    path/to/digitwise_thousand_results.csv \
-    path/to/digitwise_hundred_results.csv \
-    path/to/digitwise_ten_results.csv \
-  --positions 1,2,3,4 \
-  --mode length first second third fourth
-```
-
-This should give the subskill learning progress bar plot.
-
-For mixing error analysis, find the cell under `Sorting Mixing Error` and run it:
-```bash
-!python path/to/1_3_same_2_4_agreeing_results.csv
-```
-```bash
-!python path/to/1_3_same_2_4_conflicting_results.csv
-```
-The script will output the swap, repeat & mixing error rate for each training step we evaluated, and the mean and standard deviation for the mixing error rate among the last 10 evaluated training steps.
-
----
-
-### 3.5 NanoGPT Scaling
-For pure model scaling, we use the same data as in the regular addition task, which is generated in `3.1.1 Generate data`.
-
-To start training, go to `II. Let's Start Training!` section of the notebook. Find the cell under `NanoGPT Scaling (20M)`, and run it:
-```bash
-!python train.py 20M_4_operands_addition_plain.txt
-```
-
-This will start training a 20M-parameter NanoGPT model. 
-
-Similarly, for scaling to 100M-parameter, find the cell under `NanoGPT Scaling (100M)`, and run it:
-```bash
-!python train.py 100M_4_operands_addition_plain.txt
-```
-
-For result analysis, see `3.8.3 Result analysis`. 
-
----
-
-### 3.6 the Extended-GSM (50 questions) Evaluation
-To reproduce our evaluation of LLMs on the extended GSM test, open the `myGSM_test.ipynb` under the `gsm_test\` directory.
-
-The notebook contains a few values that are specific to *your* environment:
-
-- **Google Drive paths**
-  - `wd` (working directory where outputs are written)
-  - `model_path` (where Hugging Face model weights are cached/downloaded)
-
-- **Hugging Face access token**
-  - The notebook reads a token from a text file (e.g., `.../HF_token.txt`) and runs `huggingface-cli login`.
-  - Create that file with your own HF token.
-
-- **Model access / licenses**
-  - Some models (e.g., Llama-family) require accepting Hugging Face model terms on your account before download.
-
-
-Once you've configured these, just run the cells **top-to-bottom** (one by one). The last cell, which is titled `Evaluate the LLMs on our extended GSM question set`, should output each model's accuracy on the 50 Extended-GSM questions for each `k ∈ {1,2,3,4,5,6}`
-
----
-
-### 3.7 Training Addition with Scratchpad
-#### 3.7.1 Generate data
-To train models with scrachpad, first go to `I. Generate Data` section of the notebook -- `startHere.ipynb`.
-
-For D scratchpad, find the cell under `Addition with scratchpad (form 1)`, and run it:
-```bash
-!python data_generate.py --task addition --reasoning_mode 1 --num_operands 4 --experiment_name 4_operands_0_to_999_uniform_scratchpad1 --train_size 1000000 --test_size 10000 --val_size 10000 --train_eval True --sample-size 10000 --generate_reverse True
-```
-
-This should generate the scratchpad-added train/val/test data under `data/4_operands_0_to_999_uniform_scratchpad1/`, which are named `train_scratchpad1.txt`, `val_scratchpad1.txt`, `test_scratchpad1.txt` respectively.
-
-For D+A scratchpad, find the cell under `Addition with scratchpad (form 2)`, and run it:
-```bash
-!python data_generate.py --task addition --reasoning_mode 2 --num_operands 4 --experiment_name 4_operands_0_to_999_uniform_scratchpad2 --train_size 1000000 --test_size 10000 --val_size 10000 --train_eval True --sample-size 10000 --generate_reverse True
-```
-
-This should generate the scratchpad-added train/val/test data under `data/4_operands_0_to_999_uniform_scratchpad2/`, which are named `train_scratchpad2.txt`, `val_scratchpad2.txt`, `test_scratchpad2.txt` respectively.
-
-#### 3.7.2 Start trainng
-Go to `II. Let's Start Training!` section of the notebook. 
-
-If to train with D scratchpad, find the cell under `Scratchpad Form 1`, and run it:
-```bash
-!python train.py 4_operands_addition_plain_scratchpad1.txt
-```
-
-If to train with D+A scratchpad, find the cell under `Scratchpad Form 2`, and run it:
-```bash
-!python train.py 4_operands_addition_plain_scratchpad2.txt
-```
-
-For result analysis, see `3.8.3 Result analysis`.
-
-#### 3.7.3 Result analysis
-
-### 3.8 Finetuning Pythia on Addition Task
-#### 3.8.1 Generate data
-
-For our Pythia finetuning on addition, we use the same data as our regular addition test/val/test data in plain output format, which is generated `3.1.1`.
-
-#### 3.8.2 Start training
-
-To start training, go to `II. Let's Start Training!` section of the notebook. Find the cell under `Pythia Finetuning ` and run it:
-```bash
-!python train.py 4_operands_addition_plain_pythia.txt
-```
-#### 3.8.3 Result analysis
-In this section, we'll plot a bar gragh that shows digit-wise error rates at a fixed training step, for NanoGPT scaling, Pythia finetuning and training with two forms of scratchpad.
-
-As before, the key is to locate all the test result csv files we need.
-
-| Experiment | Test result csv filename | Location |
-| ------- | ------- | ------- |
-| NanoGPT Scaling 20M | test_results.csv | `results\4_operands_0_to_999_uniform/20M_plain_out` |
-| NanoGPT Scaling 100M | test_results.csv | `results\4_operands_0_to_999_uniform/100M_plain_out` |
-| Pythia Finuning | test_results.csv | `results\4_operands_0_to_999_uniform/plain_out_pythia` |
-| Scratchpad D | test_scratchpad1_results.csv | `results\4_operands_0_to_999_uniform_scratchpad1` |
-| Scratchpad D+A | test_scratchpad2_results.csv | `results\4_operands_0_to_999_uniform_scratchpad2` |
-
-Once we find their paths, go to `III. Result Analysis` section of the notebook. Find the cell under `Scaling, Scratchpad, and Pythia finetuning`, and run it:
-```bash
-python scaling_scratchpad_finetuning.py \
-  --test "20M NanoGPT" path/to/test_results.csv 20000 False \
-  --test "100M NanoGPT" path/to/test_results.csv 50000 False \
-  --test "Pyhtia 1B" path/to/test_results.csv 30000 False \
-  --test "Scratchpad D" path/to/test_scratchpad1_results.csv 4500 True \
-  --test "Scratchpad A + D" path/to/test_scratchpad2_results.csv 500 True
-```
-
-This will produce a bar plot that shows the digit-wise error rates for the 20M-parameter NanoGPT, 100M-parameter NanoGPT, finetuning a pretrained Pythia-1B model, training with D scratchpad, and training with D+A scratchpad, at training step 20000, 50000, 30000, 4500, and 500 respectively.
+This repository builds on [teaching_arithmetic](https://github.com/lee-ny/teaching_arithmetic) and [nanoGPT](https://github.com/karpathy/nanoGPT). We thank their authors for making these implementations available.
