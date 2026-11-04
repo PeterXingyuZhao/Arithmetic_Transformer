@@ -3,6 +3,20 @@
 This repo is intended for generating synthetic datasets and training NanoGPTs on arithmetic tasks (including addition, simple multiplication, comparison, sorting).
 This README documents repository layout, a concise quickstart (generate data → (optional) update a config → train → evaluate), and more detailed guide on how to reproduce the major results in our paper .
 
+## Attribution and licenses
+
+This project builds on Andrej Karpathy's **nanoGPT** and the **Teaching Arithmetic
+to Small Transformers** repository by Nayoung Lee and collaborators. The
+Extended-GSM questions adapt **GSM8K** by Karl Cobbe and collaborators at OpenAI.
+See [Third-party notices](THIRD_PARTY_NOTICES.md) for attribution, affected files,
+and the complete preserved MIT licenses in [licenses/](licenses/).
+
+Pretrained models have separate licenses and terms; see the exact model IDs and
+official sources in [Model licenses](MODEL_LICENSES.md). The notices for
+GSM8K-derived questions do not license model-generated responses or pretrained
+weights. See [Extended-GSM data provenance](gsm_test/README.md) for the different
+contents of the evaluation CSVs.
+
 ---
 
 ## 1 — At a glance / repo layout

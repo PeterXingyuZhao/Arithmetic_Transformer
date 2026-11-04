@@ -1,0 +1,33 @@
+{
+  "verified_on": "2026-11-03",
+  "scope": "Provenance of bundled license texts, not a manifest of historical experimental code revisions.",
+  "licenses": [
+    {
+      "asset": "karpathy/nanoGPT",
+      "license": "MIT",
+      "file": "nanoGPT-MIT.txt",
+      "source_commit": "325be85d9be8c81b436728a420e85796c57dba7e",
+      "source_url": "https://raw.githubusercontent.com/karpathy/nanoGPT/325be85d9be8c81b436728a420e85796c57dba7e/LICENSE",
+      "sha256": "a59ec5cdb1c1e447e5266a014b3e7ded511f8d6e5a08931e931c87490ff821fe",
+      "reference_basis": "Commit cited in paper bibliography; not independently verified import revision"
+    },
+    {
+      "asset": "lee-ny/teaching_arithmetic",
+      "license": "MIT",
+      "file": "teaching_arithmetic-MIT.txt",
+      "source_commit": "7e489fa72963f3f335ea61f1a99e56343b6ae88e",
+      "source_url": "https://raw.githubusercontent.com/lee-ny/teaching_arithmetic/7e489fa72963f3f335ea61f1a99e56343b6ae88e/LICENSE",
+      "sha256": "bdb3654197ed572f461bb25af85f5bb125f701e73438a473d4ca2902aa29942f",
+      "reference_basis": "Upstream license snapshot; not a verified experimental import revision"
+    },
+    {
+      "asset": "openai/grade-school-math",
+      "license": "MIT",
+      "file": "GSM8K-MIT.txt",
+      "source_commit": "3101c7d5072418e28b9008a6636bde82a006892c",
+      "source_url": "https://raw.githubusercontent.com/openai/grade-school-math/3101c7d5072418e28b9008a6636bde82a006892c/LICENSE",
+      "sha256": "86bbb73e855821d7c401912fd4bf82e34313e6e3b6fd6f909f2b6cc9e209a53b",
+      "reference_basis": "Upstream license snapshot; not a verified experimental import revision"
+    }
+  ]
+}
